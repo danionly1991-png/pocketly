@@ -93,4 +93,42 @@
   .underline-swoosh > svg {
     @apply pointer-events-none absolute -bottom-[0.12em] left-0 h-[0.28em] w-full text-ember;
   }
+
+  /* Forms and auth pages */
+  .auth-card {
+    @apply w-full max-w-[420px] rounded-2xl bg-white p-6 shadow-soft sm:p-8;
+  }
+
+  .form-label {
+    @apply mb-1.5 block text-sm font-semibold text-ink;
+  }
+
+  .form-input {
+    @apply w-full rounded-xl border border-cream-dark bg-white px-4 py-3 text-base text-ink placeholder:text-ink-soft/60 focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember;
+  }
+
+  .form-input[aria-invalid="true"] {
+    @apply border-ember-dark;
+  }
+
+  .form-error {
+    @apply mt-1.5 text-sm text-ember-dark;
+  }
+
+  .flash-success,
+  .flash-error {
+    @apply rounded-xl px-4 py-3 text-sm font-medium;
+  }
+
+  .flash-success {
+    @apply bg-cream text-ink;
+  }
+
+  .flash-error {
+    @apply bg-ember/10 text-ember-dark;
+  }
+
+  .link-ember {
+    @apply font-semibold text-ember-dark underline-offset-4 hover:underline;
+  }
 }

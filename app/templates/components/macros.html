@@ -1,5 +1,6 @@
 {#- Reusable UI macros. Import with:
-    {% from "components/macros.html" import button, accent, icon, feature %} -#}
+    {% from "components/macros.html" import button, accent, icon, feature, auth_card, logout_button %} -#}
+{% from "components/flash.html" import flash_messages %}
 
 {#- Pill link button. variant: primary | dark | ghost -#}
 {% macro button(label, href, variant="primary", arrow=False, extra="") -%}
@@ -35,4 +36,29 @@
     <p class="mt-1 text-sm leading-relaxed text-ink-soft">{{ text }}</p>
   </div>
 </div>
+{%- endmacro %}
+
+{#- Shared layout for auth pages: centered card, heading with a serif accent word, flash messages.
+    Use with {% call auth_card("Welcome", "back.", "Subtext") %}...{% endcall %} -#}
+{% macro auth_card(heading_before, accent_word, subtext="") -%}
+<section class="container-page flex justify-center py-10 sm:py-16">
+  <div class="auth-card">
+    <h1 class="text-3xl font-extrabold tracking-tight sm:text-4xl">{{ heading_before }} {{ accent(accent_word) }}</h1>
+    {%- if subtext %}
+    <p class="mt-3 text-ink-soft">{{ subtext }}</p>
+    {%- endif %}
+    <div class="mt-6 space-y-5">
+      {{ flash_messages() }}
+      {{ caller() }}
+    </div>
+  </div>
+</section>
+{%- endmacro %}
+
+{#- Log out button: a POST form with a CSRF token. variant: primary | dark | ghost -#}
+{% macro logout_button(variant="dark", extra="") -%}
+<form method="post" action="{{ url_for('auth.logout') }}" class="inline">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button type="submit" class="btn-{{ variant }} {{ extra }}">Log out</button>
+</form>
 {%- endmacro %}

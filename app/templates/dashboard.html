@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import accent, logout_button %}
+{% from "components/flash.html" import flash_messages %}
+
+{% block title %}Dashboard · Pocketly{% endblock %}
+
+{% block content %}
+<section class="container-page py-12 sm:py-20">
+  <div class="mb-6 max-w-md">{{ flash_messages() }}</div>
+  <h1 class="text-4xl font-extrabold tracking-tight sm:text-5xl">Hi, {{ accent(current_user.name ~ ".") }}</h1>
+  <p class="mt-4 text-lg text-ink-soft">Your month will show up here soon.</p>
+  <div class="mt-8">{{ logout_button("dark") }}</div>
+</section>
+{% endblock %}

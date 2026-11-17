@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import auth_card %}
+{% from "components/form_field.html" import field %}
+
+{% block title %}Check your inbox · Pocketly{% endblock %}
+
+{% block content %}
+{% call auth_card("Check your", "inbox.") %}
+{% if email %}
+<p class="text-ink-soft">We sent a verification link to <strong class="font-semibold text-ink">{{ email }}</strong>.</p>
+{% else %}
+<p class="text-ink-soft">Enter your email and we'll send a new verification link.</p>
+{% endif %}
+<p class="text-sm text-ink-soft">If this email isn't already registered, you'll get a verification email.</p>
+<form method="post" action="{{ url_for('auth.resend_verification') }}" class="space-y-5" novalidate>
+  {{ form.hidden_tag() }}
+  {% if not email %}
+  {{ field(form.email, type="email", autocomplete="email") }}
+  {% endif %}
+  <button type="submit" class="btn-primary w-full">Resend email</button>
+</form>
+<p class="text-center text-sm"><a href="{{ url_for('auth.login') }}" class="link-ember">Back to log in</a></p>
+{% endcall %}
+{% endblock %}

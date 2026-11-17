@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import auth_card %}
+{% from "components/form_field.html" import field %}
+
+{% block title %}Sign up · Pocketly{% endblock %}
+
+{% block content %}
+{% call auth_card("Create your", "account.", "Track your pocket money in seconds.") %}
+<form method="post" action="{{ url_for('auth.signup') }}" class="space-y-5" novalidate>
+  {{ form.hidden_tag() }}
+  {{ field(form.name, autocomplete="name") }}
+  {{ field(form.email, type="email", autocomplete="email") }}
+  {{ field(form.password, autocomplete="new-password", password_toggle=True) }}
+  {{ field(form.confirm, autocomplete="new-password", password_toggle=True) }}
+  <button type="submit" class="btn-primary w-full">Create account</button>
+</form>
+<p class="text-center text-sm text-ink-soft">Already have an account? <a href="{{ url_for('auth.login') }}" class="link-ember">Log in</a></p>
+{% endcall %}
+{% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/password-toggle.js') }}" defer></script>{% endblock %}
