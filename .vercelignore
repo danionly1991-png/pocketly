@@ -1,0 +1,9 @@
+# Local-only files the Vercel CLI must not upload (git-ignored, but the CLI reads this file instead)
+.venv/
+__pycache__/
+tailwindcss.exe
+tailwindcss
+.env
+.env.local
+.vscode/
+.idea/
