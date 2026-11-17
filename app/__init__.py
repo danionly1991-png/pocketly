@@ -1,7 +1,7 @@
 from datetime import date
 from pathlib import Path
 
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
 from flask_wtf.csrf import CSRFError, CSRFProtect
 
 from app import auth_utils
@@ -30,6 +30,8 @@ def create_app(config_class: type = Config) -> Flask:
 
     @app.errorhandler(CSRFError)
     def csrf_failed(_error):
+        if request.endpoint == "auth.establish_session":
+            return jsonify(redirect=url_for("auth.link_error")), 400
         flash("Your session timed out. Please try again.", "error")
         # POST-only routes have no page of their own to go back to.
         post_only = {"auth.logout": "main.landing", "auth.resend_verification": "auth.check_email"}

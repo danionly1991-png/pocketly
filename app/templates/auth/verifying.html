@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import auth_card %}
+
+{% block title %}Verifying · Pocketly{% endblock %}
+
+{% block content %}
+{% call auth_card("Verifying", "your link.") %}
+<div id="verify-box" data-csrf="{{ csrf_token() }}" data-session-url="{{ url_for('auth.establish_session') }}" data-error-url="{{ url_for('auth.link_error') }}">
+  <p class="text-ink-soft">One moment while we check your email link&hellip;</p>
+</div>
+<noscript>
+  <p class="text-ink-soft">Please turn on JavaScript to finish verifying your email.</p>
+</noscript>
+{% endcall %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var box = document.getElementById("verify-box");
+  var params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+
+  // Take the tokens out of the address bar straight away.
+  history.replaceState(null, "", window.location.pathname + window.location.search);
+
+  function go(url) { window.location.replace(url); }
+
+  if (params.get("error") || params.get("error_description") || params.get("error_code")) {
+    go(box.dataset.errorUrl);
+    return;
+  }
+
+  var accessToken = params.get("access_token");
+  var refreshToken = params.get("refresh_token");
+  if (!accessToken || !refreshToken) {
+    go(box.dataset.errorUrl);
+    return;
+  }
+
+  fetch(box.dataset.sessionUrl, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": box.dataset.csrf },
+    body: JSON.stringify({ access_token: accessToken, refresh_token: refreshToken, type: params.get("type") })
+  })
+    .then(function (response) { return response.json(); })
+    .then(function (result) { go(result.redirect || box.dataset.errorUrl); })
+    .catch(function () { go(box.dataset.errorUrl); });
+})();
+</script>
+{% endblock %}

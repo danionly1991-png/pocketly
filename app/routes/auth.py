@@ -3,7 +3,7 @@
 Routes stay thin: validate the form, call `app.services.auth_service`, flash, redirect.
 """
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
 from app import auth_utils
 from app.auth_utils import logged_out_only, login_required, safe_next
@@ -17,7 +17,11 @@ RESEND_MESSAGE = "If that account needs verifying, we've sent a new link."
 RESET_MESSAGE = "If an account exists for that email, we've sent a reset link."
 
 # Reset-password errors where the user can simply retry on the same page.
-_RETRYABLE_CODES = {"weak_password", "same_password", "rate_limit", "unknown", "unavailable"}
+_RETRYABLE_CODES = {"weak_password", "same_password", "rate_limit", "email_limit", "unknown", "unavailable"}
+
+
+# Real Supabase JWTs are well under 2 KB; anything bigger is not one.
+_MAX_TOKEN_LENGTH = 4096
 
 
 def _link_error(kind: str):
@@ -74,20 +78,36 @@ def resend_verification():
     return redirect(url_for("auth.check_email"))
 
 
+def _complete_link(kind: str, data: auth_service.SessionData) -> str:
+    """Finish a verified email link and return the URL to send the user to."""
+    if kind == "signup":
+        auth_utils.save_login(data)
+        flash("Email verified. Welcome to Pocketly!", "success")
+        return url_for("auth.dashboard")
+
+    # Recovery: keep the tokens apart from `auth`, so the user isn't logged in
+    # until they have set a new password.
+    session.pop("auth", None)
+    session["recovery"] = {"access_token": data.access_token, "refresh_token": data.refresh_token}
+    return url_for("auth.reset_password")
+
+
 @auth_bp.route("/auth/confirm")
 def confirm():
     token_hash = request.args.get("token_hash", "").strip()
-    link_type = request.args.get("type", "").strip()
 
+    if not token_hash:
+        # Supabase's default flow puts the tokens in the URL fragment (#...), which
+        # the server never sees. A small script reads it and posts to /auth/session.
+        return render_template("auth/verifying.html")
+
+    link_type = request.args.get("type", "").strip()
     if link_type in ("email", "signup"):
         kind, otp_type = "signup", "email"
     elif link_type == "recovery":
         kind, otp_type = "recovery", "recovery"
     else:
         return _link_error("signup")
-
-    if not token_hash:
-        return _link_error(kind)
 
     try:
         data = auth_service.verify_link(token_hash, otp_type)
@@ -97,16 +117,48 @@ def confirm():
         flash(error.user_message, "error")
         return redirect(url_for("auth.login"))
 
-    if kind == "signup":
-        auth_utils.save_login(data)
-        flash("Email verified. Welcome to Pocketly!", "success")
-        return redirect(url_for("auth.dashboard"))
+    return redirect(_complete_link(kind, data))
 
-    # Recovery: keep the tokens apart from `auth`, so the user isn't logged in
-    # until they have set a new password.
-    session.pop("auth", None)
-    session["recovery"] = {"access_token": data.access_token, "refresh_token": data.refresh_token}
-    return redirect(url_for("auth.reset_password"))
+
+@auth_bp.route("/auth/session", methods=["POST"])
+def establish_session():
+    """Receive the tokens from the URL fragment, check them with Supabase, then log in.
+
+    Called by the script on the "Verifying..." page. Replies with JSON holding the
+    URL to go to next. CSRF is checked by Flask-WTF through the X-CSRFToken header.
+    """
+    payload = request.get_json(silent=True)
+    payload = payload if isinstance(payload, dict) else {}
+    access_token = payload.get("access_token")
+    refresh_token = payload.get("refresh_token")
+    link_type = payload.get("type")
+
+    if link_type in ("signup", "email"):
+        kind = "signup"
+    elif link_type == "recovery":
+        kind = "recovery"
+    else:
+        kind = None
+
+    tokens_ok = all(isinstance(t, str) and 0 < len(t) <= _MAX_TOKEN_LENGTH for t in (access_token, refresh_token))
+    if kind is None or not tokens_ok:
+        return jsonify(redirect=url_for("auth.link_error")), 400
+
+    try:
+        data = auth_service.verify_tokens(access_token, refresh_token)
+    except AuthError as error:
+        if error.code == "link_invalid":
+            return jsonify(redirect=url_for("auth.link_error", kind=kind)), 400
+        flash(error.user_message, "error")
+        return jsonify(redirect=url_for("auth.login")), 503
+
+    return jsonify(redirect=_complete_link(kind, data))
+
+
+@auth_bp.route("/auth/link-error")
+def link_error():
+    kind = request.args.get("kind")
+    return _link_error(kind if kind in ("signup", "recovery") else "unknown")
 
 
 # --- Log in and out ---------------------------------------------------------

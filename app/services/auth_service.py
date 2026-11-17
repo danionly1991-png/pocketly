@@ -23,11 +23,18 @@ logger = logging.getLogger(__name__)
 GENERIC_MESSAGE = "Something went wrong. Please try again."
 UNAVAILABLE_MESSAGE = "Login isn't available right now. Please try again later."
 RATE_LIMIT_MESSAGE = "Please wait a minute before trying again."
+EMAIL_LIMIT_MESSAGE = "We've hit the email sending limit. Please try again in about an hour."
 WEAK_PASSWORD_MESSAGE = "Password must be at least 8 characters and include a letter and a number."
 
 # Codes that mean "this email link is no longer usable".
 _LINK_CODES = {"otp_expired", "otp_invalid", "otp_disabled", "flow_state_expired", "flow_state_not_found"}
 _RATE_LIMIT_CODES = {"over_email_send_rate_limit", "over_request_rate_limit", "over_sms_send_rate_limit"}
+
+# Supabase uses the same code, `over_email_send_rate_limit` (HTTP 429), for two different limits,
+# so the message tells them apart:
+#   - project-wide hourly cap:  "email rate limit exceeded"
+#   - per-address cooldown:     "For security purposes, you can only request this after N seconds."
+_HOURLY_EMAIL_LIMIT_TEXT = "email rate limit exceeded"
 
 _MESSAGES = {
     "invalid_credentials": "Incorrect email or password.",
@@ -93,6 +100,8 @@ def _friendly(error: Exception) -> AuthError:
 
         if isinstance(error, AuthWeakPasswordError) or code == "weak_password":
             return AuthError(WEAK_PASSWORD_MESSAGE, code="weak_password", field="password")
+        if code == "over_email_send_rate_limit" and _HOURLY_EMAIL_LIMIT_TEXT in str(error).lower():
+            return AuthError(EMAIL_LIMIT_MESSAGE, code="email_limit")
         if code in _RATE_LIMIT_CODES or status == 429:
             return AuthError(RATE_LIMIT_MESSAGE, code="rate_limit")
         if code in _MESSAGES:
@@ -169,6 +178,28 @@ def verify_link(token_hash: str, link_type: str) -> SessionData:
     except _CAUGHT as error:
         raise _link_error(error) from None
     if not response.session:
+        raise AuthError("This link is invalid or has expired.", code="link_invalid")
+    return _to_session_data(response.session)
+
+
+def verify_tokens(access_token: str, refresh_token: str) -> SessionData:
+    """Validate tokens that Supabase put in the URL fragment of an email link.
+
+    The tokens came from the browser, so they are never trusted as-is.
+    `set_session` asks Supabase to confirm the access token (and refreshes it
+    if it has already expired), so a forged or stale token is rejected here.
+    """
+    auth = _client()
+    try:
+        response = auth.set_session(access_token, refresh_token)
+    except _CAUGHT as error:
+        if isinstance(error, SupabaseAuthError) and getattr(error, "status", None) != 429:
+            logger.warning("Email link tokens rejected: code=%s", getattr(error, "code", None))
+            raise AuthError("This link is invalid or has expired.", code="link_invalid") from None
+        if isinstance(error, ValueError):  # malformed token that could not be decoded
+            raise AuthError("This link is invalid or has expired.", code="link_invalid") from None
+        raise _friendly(error) from None
+    if not response or not response.session:
         raise AuthError("This link is invalid or has expired.", code="link_invalid")
     return _to_session_data(response.session)
 

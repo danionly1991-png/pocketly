@@ -82,19 +82,38 @@ Login runs on the server in Flask. Do these steps once in the Supabase dashboard
 2. **URL Configuration:**
    - **Site URL:** `https://<your-app>.vercel.app`
    - **Redirect URLs:** add `https://<your-app>.vercel.app/**`, `http://127.0.0.1:5000/**` and `http://localhost:5000/**`
-3. **Email Templates → Confirm signup:** set the link to
-   ```html
-   <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email">Confirm your email</a>
-   ```
-4. **Email Templates → Reset password:** set the link to
-   ```html
-   <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery">Reset your password</a>
-   ```
-5. **Vercel → Environment Variables:** set `SITE_URL=https://<your-app>.vercel.app` next to the other variables, then redeploy.
+3. **Email Templates:** leave them on Supabase's defaults. Editing them needs a custom SMTP provider, and the app works without that (see "How email links work" below).
+4. **Vercel → Environment Variables:** set `SITE_URL=https://<your-app>.vercel.app` next to the other variables, then redeploy.
+
+### How email links work
+
+With Supabase's default templates, the verification and reset links go to Supabase first. Supabase checks the link, then redirects the browser to `SITE_URL/auth/confirm` with the tokens in the URL **fragment**:
+
+```
+/auth/confirm#access_token=...&refresh_token=...&expires_in=3600&type=signup      (type=recovery for password reset)
+/auth/confirm#error=access_denied&error_code=otp_expired&error_description=...    (expired or used link)
+```
+
+A fragment (`#...`) is never sent to the server, so Flask can't read it. The flow is:
+
+1. `/auth/confirm` has no `token_hash` query param, so it renders a small "Verifying..." page.
+2. A short inline script reads `window.location.hash` and clears it from the address bar with `history.replaceState` straight away, so the tokens don't stay visible.
+3. If the hash holds an error, or no tokens, the script goes to `/auth/link-error` (the styled "link expired" page).
+4. Otherwise it POSTs `access_token`, `refresh_token` and `type` as JSON to `/auth/session`, with the CSRF token in an `X-CSRFToken` header.
+5. `/auth/session` does not trust the tokens. `auth_service.verify_tokens` calls Supabase `set_session`, which checks the access token with Supabase (and refreshes it if it has expired). Invalid tokens go to the link-error page.
+6. On success the server replies with JSON `{"redirect": "..."}` and the script follows it:
+   - `type=signup`: the user is logged in, then redirected to `/dashboard` ("Email verified. Welcome to Pocketly!").
+   - `type=recovery`: the tokens are kept in `session["recovery"]` (not a login yet), then redirected to `/reset-password`.
+
+Tokens are never logged.
+
+**Optional upgrade (custom SMTP):** once you can edit email templates, set the links to `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email` (Confirm signup) and `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery` (Reset password). `/auth/confirm` still handles these: when `token_hash` is present it verifies it on the server with `verify_otp`, with no JavaScript. Both paths work side by side. Use `{{ .RedirectTo }}` (the app sends `SITE_URL/auth/confirm`) rather than `{{ .SiteURL }}`, so emails sent during local development link back to your local server.
 
 Notes:
-- The templates use `{{ .RedirectTo }}` (the app sends `SITE_URL/auth/confirm`) instead of `{{ .SiteURL }}`. That way emails sent while developing locally link back to your local server, not to production.
-- Supabase's built-in email sender only allows a few emails per hour. "Please wait a minute before trying again." during testing is expected. A custom SMTP provider can be added later.
+- Supabase's built-in email sender only allows a few emails per hour for the whole project. Both limits come back as HTTP 429 with the same code, `over_email_send_rate_limit`, so `auth_service._friendly` tells them apart by the message:
+  - `email rate limit exceeded` (hourly cap): "We've hit the email sending limit. Please try again in about an hour."
+  - `For security purposes, you can only request this after N seconds.` (per-address cooldown): "Please wait a minute before trying again."
+  Both show on sign up, resend verification and forgot password. A custom SMTP provider removes the hourly cap.
 - The login is stored only in a signed cookie (HttpOnly, SameSite=Lax, Secure on https). `SECRET_KEY` must be set on Vercel, or sessions break.
 
 ---
