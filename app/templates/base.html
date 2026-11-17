@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Pocketly — Know where your pocket money goes{% endblock %}</title>
+  <meta name="description" content="Pocketly is a simple expense tracker for your monthly pocket money. Log daily expenses in seconds and see exactly how this month is going.">
+  <meta name="theme-color" content="#F4EFE6">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=Instrument+Serif:ital@1&display=swap">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
+</head>
+<body class="flex min-h-screen flex-col">
+  {% block navbar %}{% include "components/navbar.html" %}{% endblock %}
+
+  <main class="flex-1">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block footer %}{% include "components/footer.html" %}{% endblock %}
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

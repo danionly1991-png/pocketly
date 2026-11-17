@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import button, accent %}
+
+{% block title %}Page not found · Pocketly{% endblock %}
+
+{% block content %}
+<section class="container-page flex flex-col items-center py-20 text-center sm:py-28" data-page="404">
+  <p class="text-sm font-semibold uppercase tracking-wider text-ink-soft">Error 404</p>
+  <h1 class="mt-4 text-[40px] font-extrabold leading-[1.05] tracking-tight sm:text-6xl">
+    This page went {{ accent("missing.") }}
+  </h1>
+  <p class="mt-6 max-w-md text-ink-soft">The page you're looking for doesn't exist or has moved. Your pocket money is safe, though.</p>
+  <div class="mt-8">{{ button("Back to home", url_for("main.landing"), "dark") }}</div>
+</section>
+{% endblock %}

@@ -1,0 +1,96 @@
+/*
+ * Pocketly design system (Tailwind CSS v4).
+ * Build: .\tailwindcss.exe -i app/styles/input.css -o public/static/css/output.css --minify
+ */
+@import "tailwindcss" source(none);
+
+/* Only scan the Jinja templates (paths are relative to this file). */
+@source "../templates";
+
+@theme {
+  /* Colors: ~70% cream, ~30% ink, ember as a small accent only */
+  --color-cream: #F4EFE6;
+  --color-cream-dark: #EAE3D6;
+  --color-ink: #141414;
+  --color-ink-soft: #4A4A4A;
+  --color-ember: #D9541E;
+  --color-ember-dark: #B84415;
+  --color-white: #FFFFFF;
+
+  /* Typography */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Instrument Serif", ui-serif, Georgia, "Times New Roman", serif;
+
+  /* Layout: max content width ≈ 1200px -> max-w-page */
+  --container-page: 75rem;
+
+  /* Soft shadow for floating cards -> shadow-soft */
+  --shadow-soft: 0 1px 2px rgb(20 20 20 / 0.04), 0 12px 32px -12px rgb(20 20 20 / 0.18);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-cream text-ink font-sans antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ember;
+  }
+}
+
+@layer components {
+  /* Page container */
+  .container-page {
+    @apply mx-auto w-full max-w-page px-5 sm:px-8;
+  }
+
+  /* Buttons: shared pill base */
+  .btn-primary,
+  .btn-dark,
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-colors duration-150 sm:px-6 sm:py-3 sm:text-base;
+  }
+
+  .btn-primary {
+    @apply bg-ember text-white hover:bg-ember-dark;
+  }
+
+  .btn-dark {
+    @apply bg-ink text-white hover:bg-ink-soft;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-ink hover:bg-cream-dark;
+  }
+
+  /* Compact size modifier (navbar) */
+  .btn-sm {
+    @apply px-4 py-2 text-sm sm:px-4 sm:py-2 sm:text-sm;
+  }
+
+  /* Cards */
+  .card {
+    @apply rounded-2xl bg-white p-5 shadow-soft sm:p-6;
+  }
+
+  .card-dark {
+    @apply rounded-2xl bg-ink p-5 text-cream sm:p-6;
+  }
+
+  /* Italic serif accent word with a hand-drawn orange underline */
+  .accent-word {
+    @apply font-serif font-normal italic tracking-normal;
+  }
+
+  .underline-swoosh {
+    @apply relative inline-block whitespace-nowrap;
+  }
+
+  .underline-swoosh > svg {
+    @apply pointer-events-none absolute -bottom-[0.12em] left-0 h-[0.28em] w-full text-ember;
+  }
+}
