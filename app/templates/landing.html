@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 {% from "components/macros.html" import button, accent, feature %}
+{% from "components/flash.html" import flash_messages %}
 
 {% block content %}
+{% if get_flashed_messages() %}
+<div class="container-page"><div class="max-w-md">{{ flash_messages() }}</div></div>
+{% endif %}
 {#- Hero -#}
 <section class="container-page pb-16 pt-6 sm:pt-10 lg:pb-24 lg:pt-14">
   <div class="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
@@ -20,8 +24,8 @@
       </p>
 
       <div class="mt-8 flex flex-wrap items-center gap-3">
-        {{ button("Get started", url_for("placeholders.signup"), "primary", arrow=True) }}
-        {{ button("Log in", url_for("placeholders.login"), "ghost") }}
+        {{ button("Get started", get_started_url, "primary", arrow=True) }}
+        {{ button("Log in", url_for("auth.login"), "ghost") }}
       </div>
 
       <p class="mt-5 text-sm text-ink-soft">Free · No card needed · Built for students</p>
@@ -46,7 +50,7 @@
     <p class="max-w-xl text-2xl font-extrabold tracking-tight sm:text-3xl">
       Ready to take control of your pocket money?
     </p>
-    {{ button("Get started", url_for("placeholders.signup"), "primary", arrow=True) }}
+    {{ button("Get started", get_started_url, "primary", arrow=True) }}
   </div>
 </section>
 {% endblock %}
