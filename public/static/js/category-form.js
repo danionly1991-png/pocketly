@@ -75,27 +75,47 @@
 
   var file = form.querySelector('input[type="file"]');
   var preview = form.querySelector("[data-icon-preview]");
+  var fileName = form.querySelector("[data-file-name]");
+  var fileAction = form.querySelector("[data-file-action]");
+  var originalSrc = preview && !preview.hidden ? preview.getAttribute("src") : null;
+
+  function showName(text) {
+    if (fileName) fileName.textContent = text;
+  }
+
   if (file) {
     file.addEventListener("change", async function () {
       var chosen = file.files && file.files[0];
-      if (!chosen) return;
+      if (!chosen) {
+        showName("No photo chosen");
+        return;
+      }
       selectType("image");
+      showName(chosen.name);
+      if (fileAction) fileAction.textContent = "Change photo";
 
+      var decodable = true;
       try {
         var smaller = await shrink(chosen);
         if (smaller !== chosen && window.DataTransfer) {
           var transfer = new DataTransfer();
           transfer.items.add(smaller);
           file.files = transfer.files;
-          chosen = smaller;
         }
       } catch (error) {
-        // Can't decode it here (e.g. HEIC): send the original and let the server decide.
+        // Can't decode it here (e.g. HEIC, or not an image): send the original and let the server decide.
+        decodable = false;
       }
 
       if (preview) {
-        preview.src = URL.createObjectURL(chosen);
-        preview.hidden = false;
+        if (decodable) {
+          preview.src = URL.createObjectURL(file.files[0]);
+          preview.hidden = false;
+        } else if (originalSrc) {
+          preview.src = originalSrc;
+        } else {
+          preview.hidden = true;
+        }
       }
     });
   }

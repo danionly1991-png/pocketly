@@ -64,10 +64,13 @@
           </div>
 
           <div data-icon-panel="image">
-            <label for="photo" class="form-label">Photo</label>
+            <span class="form-label">Photo</span>
             <div class="flex items-center gap-3">
-              <img data-icon-preview alt="" width="64" height="64" class="h-16 w-16 rounded-full object-cover"{% if editing and editing.icon_type == "image" %} src="{{ editing.icon_url }}"{% else %} hidden{% endif %}>
-              <input type="file" id="photo" name="photo" accept="image/*" class="min-w-0 flex-1 text-sm">
+              <img data-icon-preview alt="" width="64" height="64" class="h-16 w-16 shrink-0 rounded-full object-cover"{% if editing and editing.icon_type == "image" %} src="{{ editing.icon_url }}"{% else %} hidden{% endif %}>
+              <div class="min-w-0 flex-1">
+                <label for="photo" class="category-chip justify-center">{{ icon("image", "h-5 w-5") }}<span data-file-action>{% if editing and editing.icon_type == "image" %}Change photo{% else %}Choose photo{% endif %}</span><input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/webp,image/*" class="sr-only"></label>
+                <p data-file-name class="mt-1.5 truncate text-sm text-ink-soft" aria-live="polite">No photo chosen</p>
+              </div>
             </div>
             <p class="mt-1.5 text-xs text-ink-soft">JPG, PNG or WEBP, up to 2 MB.</p>
             {% if form.photo.errors %}<p class="form-error">{{ form.photo.errors[0] }}</p>{% endif %}
