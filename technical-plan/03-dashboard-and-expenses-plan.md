@@ -995,3 +995,16 @@ There's no committed test suite (CLAUDE.md). Use scratchpad scripts plus the Fla
 - **Renamed "Other" + re-running seeding:** `on conflict do nothing` skips the duplicate fallback, so there's no error and no second "Other".
 - **Category delete race:** `delete_category` locks the row (`for update`) and runs in one transaction.
 - **Pillow on Vercel:** about 10 MB wheel, well within limits; check the first deploy's build log.
+
+---
+
+## 10. Deviations made during implementation
+
+| # | Change | Reason |
+|---|---|---|
+| I1 | `components/top_bar.html` and `components/profile_menu.html` are `{% include %}` partials (they read `view`, `month_params` and `current_user` from the page context), not macros | Imported macros don't see context-processor variables such as `current_user`. |
+| I2 | The profile menu is rendered twice in the top bar (one shown below `sm`, one from `sm` up) | It sits at the right of the heading on phones and next to the "Spent" tab on desktop. |
+| I3 | `expense_form(...)` takes `today_iso` as an explicit argument; added the `iso_day_name` Jinja filter | Macros can't read the page context; the weekday under the date field is rendered by Python. |
+| I4 | Added `DashboardView.month_value` / `day_value` properties, `services.expenses.empty_view()` and a `month_params` template variable | Keeps `strftime` and fallback logic out of the templates; lets the dashboard still render when the database can't be reached. |
+| I5 | Phases 3–6 (routes, templates, JS) were written together, then verified with the offline route checks, and committed in logical pieces | The templates and routes depend on each other. |
+| I6 | `CategoryRow` dataclass in `routes/categories.py` builds the per-category delete-dialog message | The plan said strings are built in the route, not the template. |

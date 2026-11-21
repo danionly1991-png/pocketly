@@ -2,7 +2,7 @@
 
 Pocketly is a simple expense tracker for managing your monthly pocket money. You log daily expenses in seconds and see exactly how this month is going.
 
-Stack: Flask + Jinja2, Tailwind CSS v4 (standalone CLI), Supabase Auth, deployed on Vercel.
+Stack: Flask + Jinja2, Tailwind CSS v4 (standalone CLI), Supabase (Auth, Postgres, Storage), Pillow for icon uploads, deployed on Vercel.
 
 ---
 
@@ -12,21 +12,24 @@ Stack: Flask + Jinja2, Tailwind CSS v4 (standalone CLI), Supabase Auth, deployed
 app/
   __init__.py          create_app() factory, registers blueprints, CSRF, 404 handler
   config.py            Config class (reads env vars / .env)
-  supabase_client.py   get_supabase(): a new client per request, cached on flask.g
+  supabase_client.py   get_supabase() (anon, for Auth) and get_user_supabase(token) (acts as the logged-in user, so RLS applies); both per request on flask.g
   auth_utils.py        login_required, logged_out_only, current user, token refresh, safe_next
-  forms.py             Flask-WTF forms (signup, login, forgot/reset password)
-  services/            auth_service.py: the only module that talks to Supabase Auth
-  routes/              main.py (landing "/"), auth.py (auth pages + /dashboard), placeholders.py (/analytics)
+  forms.py             Flask-WTF forms (auth, ExpenseForm, CategoryForm)
+  services/            auth_service.py (Supabase Auth only), expenses.py, categories.py, storage.py (icon upload/resize), db.py (shared errors/client)
+  utils/dates.py       Asia/Karachi "today", month/day helpers, Jinja filters (money, dates)
+  routes/              main.py (landing), auth.py, expenses.py (/dashboard, /expenses/*), categories.py (/categories/*), placeholders.py (/analytics)
   styles/input.css     Tailwind source: theme tokens (@theme) + component classes
   templates/           base.html, landing.html, dashboard.html, coming_soon.html, 404.html,
-                       auth/ (signup, login, check email, forgot/reset password, link error), components/
+                       auth/, expenses/ (detail, edit), categories/, components/
 public/static/         served at /static/* (Vercel CDN in production, Flask locally)
   css/output.css       compiled Tailwind CSS (committed)
-  js/password-toggle.js  "Show/Hide" button for password fields
+  js/                  password-toggle, dialogs, dashboard, expense-form, category-form (small vanilla scripts)
   img/favicon.svg
+supabase/migrations/   SQL migrations (applied to the Supabase project)
 wsgi.py                entry point for Vercel and `flask run`
 vercel.json            Vercel function settings
 specs/                 feature specs
+technical-plan/        implementation plans
 ```
 
 ---
@@ -118,6 +121,24 @@ Notes:
 
 ---
 
+## Database and Storage (Supabase migrations)
+
+Every database and storage change is a SQL file in `supabase/migrations/`, committed to the repo **and** applied to the Supabase project. Claude Code applies them through its Supabase access (the Supabase MCP), so nobody runs SQL by hand. Keep the file and the applied migration identical; to change something, add a new file instead of editing an applied one.
+
+| File | What it does |
+|---|---|
+| `20261122_01_categories_expenses.sql` | `categories` and `expenses` tables, checks and indexes, Row Level Security (each user only sees their own rows), the shared `set_updated_at()` trigger, the 7 default categories (trigger on `auth.users` for new sign-ups, backfill for existing users), and the functions `dashboard_totals`, `category_expense_counts` and `delete_category` |
+| `20261122_02_category_icons_storage.sql` | the public `category-icons` Storage bucket and its policies |
+
+Notes:
+- The app only uses the **anon key** plus the logged-in user's access token (sent per request by `get_user_supabase()`), so RLS applies as that user. The `service_role` key is never used.
+- `categories.is_fallback` marks each user's undeletable "Other" category (it can be renamed). Deleting a category moves its expenses there, atomically, in the `delete_category` function.
+- **Storage bucket `category-icons`:** public read (icon URLs need no signing), but a user can only write inside their own folder `{user_id}/`. Objects are `{user_id}/{random}.webp`, resized by the app to 128×128 WEBP (Pillow). The bucket accepts only `image/webp` up to 512 KB.
+- Money is stored as `numeric(12,2)` and handled as `Decimal` in Python. A month's list is fetched in one request (PostgREST returns at most 1000 rows, far more than a month of personal expenses); there is no pagination yet.
+- All "today" and "current month" logic uses Asia/Karachi time (`app/utils/dates.py`, with the `tzdata` package), because Vercel runs in UTC.
+
+---
+
 ## Tailwind CSS (standalone CLI, no Node needed)
 
 The compiled `public/static/css/output.css` is committed, so you only need the CLI when you change templates or styles.
@@ -150,7 +171,7 @@ curl -sSLo tailwindcss https://github.com/tailwindlabs/tailwindcss/releases/down
 
 On macOS and Linux, use `./tailwindcss` instead of `.\tailwindcss.exe`.
 
-Design tokens (colors `cream`, `cream-dark`, `ink`, `ink-soft`, `ember`, `ember-dark`, plus the fonts) live in the `@theme` block of `app/styles/input.css`. Component classes live under `@layer components`: `btn-primary`, `btn-dark`, `btn-ghost`, `card`, `card-dark`, `underline-swoosh`, `container-page`, and the form classes `auth-card`, `form-label`, `form-input`, `form-error`, `flash-success`, `flash-error` and `link-ember`. Tailwind v4 has no `tailwind.config.js`.
+Design tokens (colors `cream`, `cream-dark`, `ink`, `ink-soft`, `ember`, `ember-dark`, plus the fonts) live in the `@theme` block of `app/styles/input.css`. Component classes live under `@layer components`: `btn-primary`, `btn-dark`, `btn-ghost`, `card`, `card-dark`, `underline-swoosh`, `container-page`, the form classes `auth-card`, `form-label`, `form-input`, `form-error`, `flash-success`, `flash-error` and `link-ember`, and the dashboard classes `expense-row`, `category-chip`, `emoji-chip`, `icon-circle`, `fab`, `avatar`, `select-pill`, `spent-tab`, `badge`, `note-box`, `dialog-panel` and `dialog-confirm`. Tailwind v4 has no `tailwind.config.js`.
 
 ---
 
