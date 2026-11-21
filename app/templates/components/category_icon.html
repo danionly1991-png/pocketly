@@ -1,0 +1,11 @@
+{#- Round category icon: the emoji, or the uploaded photo cropped to a circle. Decorative (the name is always shown next to it).
+    Import with: {% from "components/category_icon.html" import category_icon %}. size: md | lg -#}
+{% macro category_icon(category, size="md") -%}
+<span class="icon-circle {{ 'h-12 w-12 text-2xl' if size == 'lg' else 'h-9 w-9 text-lg' }}">
+  {%- if category.icon_type == "image" and category.icon_url -%}
+  <img src="{{ category.icon_url }}" alt="" width="{{ 48 if size == 'lg' else 36 }}" height="{{ 48 if size == 'lg' else 36 }}" loading="lazy" class="h-full w-full object-cover">
+  {%- else -%}
+  <span aria-hidden="true">{{ category.icon_value }}</span>
+  {%- endif -%}
+</span>
+{%- endmacro %}

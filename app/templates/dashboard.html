@@ -1,14 +1,62 @@
 {% extends "base.html" %}
-{% from "components/macros.html" import accent, logout_button %}
+{% from "components/macros.html" import icon %}
 {% from "components/flash.html" import flash_messages %}
+{% from "components/expense_row.html" import expense_row %}
+{% from "components/expense_form.html" import expense_form %}
 
 {% block title %}Dashboard · Pocketly{% endblock %}
 
 {% block content %}
-<section class="container-page py-12 sm:py-20">
-  <div class="mb-6 max-w-md">{{ flash_messages() }}</div>
-  <h1 class="text-4xl font-extrabold tracking-tight sm:text-5xl">Hi, {{ accent(current_user.name ~ ".") }}</h1>
-  <p class="mt-4 text-lg text-ink-soft">Your month will show up here soon.</p>
-  <div class="mt-8">{{ logout_button("dark") }}</div>
+<section class="container-page pb-6 pt-2 sm:pt-4">
+  <div class="mb-4 max-w-xl">{{ flash_messages() }}</div>
+
+  {% include "components/top_bar.html" %}
+
+  <div class="mt-8">
+    {% if view.day %}
+    <p class="font-semibold">Showing {{ view.day|short_date }} · {{ view.totals.view_total|money }} that day</p>
+    {% else %}
+    <h2 class="text-xl font-bold">{{ view.month|month_label }}</h2>
+    {% if not view.is_current_month %}
+    <p class="mt-1 text-ink-soft">Total for {{ view.month|month_label }}: {{ view.totals.view_total|money }}</p>
+    {% endif %}
+    {% endif %}
+  </div>
+
+  {% if view.expenses %}
+  <ol class="mt-4 space-y-3 pb-28">
+    {% for expense in view.expenses %}
+    {{ expense_row(expense, loop.index) }}
+    {% endfor %}
+  </ol>
+  {% else %}
+  <div class="card mt-4 mb-28 text-center text-ink-soft">
+    {% if view.day %}
+    Nothing spent on {{ view.day|short_date }}.
+    {% elif view.is_current_month %}
+    No expenses yet this month. Tap + to add your first one.
+    {% else %}
+    No expenses in {{ view.month|month_label }}.
+    {% endif %}
+  </div>
+  {% endif %}
 </section>
+
+<a href="{{ url_for('expenses.dashboard', add=1, **params) }}" class="fab" data-open-dialog="add-expense" aria-label="Add expense">{{ icon("plus", "h-7 w-7") }}</a>
+
+<dialog id="add-expense" class="dialog-panel" aria-labelledby="add-expense-title"{% if open_add %} open data-auto-open{% endif %}>
+  <div class="p-5 sm:p-6">
+    <div class="mb-5 flex items-center justify-between">
+      <h2 id="add-expense-title" class="text-xl font-bold">Add expense</h2>
+      <button type="button" class="btn-ghost btn-sm" data-close-dialog aria-label="Close">×</button>
+    </div>
+    {{ expense_form(form, categories, url_for('expenses.create_expense'), "Save expense", today_iso, in_dialog=True) }}
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dialogs.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/expense-form.js') }}" defer></script>
 {% endblock %}

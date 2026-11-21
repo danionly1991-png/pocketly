@@ -1,0 +1,11 @@
+{#- Round profile button with a small menu. Included by the dashboard top bar (needs `current_user`). -#}
+{% from "components/macros.html" import logout_button %}
+<details class="relative" data-profile-menu>
+  <summary class="avatar" aria-label="Profile menu">{{ current_user.initial }}</summary>
+  <div class="absolute right-0 z-30 mt-2 w-64 rounded-2xl bg-white p-4 shadow-soft">
+    <p class="font-semibold">{{ current_user.name }}</p>
+    <p class="break-all text-sm text-ink-soft">{{ current_user.email }}</p>
+    <a href="{{ url_for('categories.index') }}" class="btn-ghost btn-sm mt-3 w-full justify-start">Manage categories</a>
+    <div class="mt-2">{{ logout_button("dark", "btn-sm w-full") }}</div>
+  </div>
+</details>

@@ -1,0 +1,25 @@
+{#- A button that opens a small confirm <dialog>; confirming POSTs to `action` (with a CSRF token).
+    Without JavaScript the trigger is replaced by a plain POST button, so deleting still works.
+    Import with: {% from "components/confirm_dialog.html" import confirm_dialog %} -#}
+{% macro confirm_dialog(id, title, message, action, trigger_label="Delete", trigger_class="btn-ghost text-ember-dark", confirm_label="Delete") -%}
+<button type="button" hidden data-js-only data-open-dialog="{{ id }}" class="{{ trigger_class }}">{{ trigger_label }}</button>
+<noscript>
+  <form method="post" action="{{ action }}" class="inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="{{ trigger_class }}">{{ trigger_label }}</button>
+  </form>
+</noscript>
+<dialog id="{{ id }}" class="dialog-confirm" aria-labelledby="{{ id }}-title">
+  <div class="p-6">
+    <h2 id="{{ id }}-title" class="text-lg font-bold">{{ title }}</h2>
+    <p class="mt-2 text-sm text-ink-soft">{{ message }}</p>
+    <div class="mt-6 flex justify-end gap-2">
+      <button type="button" class="btn-ghost btn-sm" data-close-dialog>Cancel</button>
+      <form method="post" action="{{ action }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn-primary btn-sm">{{ confirm_label }}</button>
+      </form>
+    </div>
+  </div>
+</dialog>
+{%- endmacro %}

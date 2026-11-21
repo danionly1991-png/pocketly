@@ -1,0 +1,16 @@
+{#- One clickable expense bar. Import with: {% from "components/expense_row.html" import expense_row %} -#}
+{% from "components/category_icon.html" import category_icon %}
+
+{% macro expense_row(expense, number) -%}
+<li>
+  <a href="{{ url_for('expenses.detail', expense_id=expense.id) }}" class="expense-row">
+    <span class="hidden text-sm text-ink-soft sm:block">{{ number }}</span>
+    <span class="flex min-w-0 items-center gap-3">
+      {{ category_icon(expense.category) }}
+      <span class="truncate font-semibold">{{ expense.category.name }}</span>
+    </span>
+    <span class="text-right font-bold tabular-nums">{{ expense.amount|money }}</span>
+    <span class="col-span-2 text-sm text-ink-soft sm:col-span-1 sm:text-right"><span class="sm:hidden">#{{ number }} · </span>{{ expense.spent_on|short_date }}</span>
+  </a>
+</li>
+{%- endmacro %}

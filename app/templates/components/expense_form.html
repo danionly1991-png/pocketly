@@ -1,0 +1,72 @@
+{#- The expense form, shared by the add panel (dashboard) and the edit page.
+    Import with: {% from "components/expense_form.html" import expense_form %} -#}
+{% from "components/category_icon.html" import category_icon %}
+
+{% macro expense_form(form, categories, action, submit_label, today_iso, in_dialog=False, cancel_url=None) -%}
+<form method="post" action="{{ action }}" class="space-y-5" novalidate>
+  {{ form.hidden_tag() }}
+
+  <div>
+    <label for="{{ form.amount.id }}" class="form-label">Amount</label>
+    <div class="relative">
+      <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center font-semibold text-ink-soft">Rs</span>
+      {% if form.amount.errors -%}
+      {{ form.amount(class="form-input pl-12", type="number", step="0.01", min="0.01", inputmode="decimal", autocomplete="off", aria_invalid="true", aria_describedby="amount-error") }}
+      {%- else -%}
+      {{ form.amount(class="form-input pl-12", type="number", step="0.01", min="0.01", inputmode="decimal", autocomplete="off", placeholder="0") }}
+      {%- endif %}
+    </div>
+    {% if form.amount.errors %}<p id="amount-error" class="form-error">{{ form.amount.errors[0] }}</p>{% endif %}
+  </div>
+
+  <fieldset>
+    <legend class="form-label">Category</legend>
+    {% if categories %}
+    <div class="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3">
+      {% for c in categories %}
+      <label class="category-chip">
+        <input type="radio" name="category_id" value="{{ c.id }}" class="sr-only"{% if form.category_id.data == c.id %} checked{% endif %}>
+        {{ category_icon(c) }}
+        <span class="truncate">{{ c.name }}</span>
+      </label>
+      {% endfor %}
+      <a href="{{ url_for('categories.index') }}" class="category-chip justify-center border-dashed">+ New category</a>
+    </div>
+    {% else %}
+    <p class="text-sm text-ink-soft">Couldn't load your categories. <a href="{{ url_for('categories.index') }}" class="link-ember">Manage categories</a></p>
+    {% endif %}
+    {% if form.category_id.errors %}<p class="form-error">{{ form.category_id.errors[0] }}</p>{% endif %}
+  </fieldset>
+
+  <div>
+    <label for="{{ form.spent_on.id }}" class="form-label">Date</label>
+    {% if form.spent_on.errors -%}
+    {{ form.spent_on(class="form-input", type="date", max=today_iso, data_day_input=True, aria_invalid="true", aria_describedby="spent_on-error") }}
+    {%- else -%}
+    {{ form.spent_on(class="form-input", type="date", max=today_iso, data_day_input=True) }}
+    {%- endif %}
+    <p class="mt-1.5 text-sm text-ink-soft" data-day-name>{{ form.spent_on.data|iso_day_name }}</p>
+    {% if form.spent_on.errors %}<p id="spent_on-error" class="form-error">{{ form.spent_on.errors[0] }}</p>{% endif %}
+  </div>
+
+  <div>
+    <label for="{{ form.note.id }}" class="form-label">Note <span class="font-normal text-ink-soft">(optional)</span></label>
+    {% if form.note.errors -%}
+    {{ form.note(class="form-input min-h-24", rows="3", maxlength="500", data_char_input=True, aria_invalid="true", aria_describedby="note-error") }}
+    {%- else -%}
+    {{ form.note(class="form-input min-h-24", rows="3", maxlength="500", data_char_input=True) }}
+    {%- endif %}
+    <p class="mt-1.5 text-right text-xs text-ink-soft"><span data-char-count>{{ (form.note.data or '')|length }}</span>/500</p>
+    {% if form.note.errors %}<p id="note-error" class="form-error">{{ form.note.errors[0] }}</p>{% endif %}
+  </div>
+
+  <div class="space-y-2">
+    <button type="submit" class="btn-primary w-full">{{ submit_label }}</button>
+    {% if in_dialog %}
+    <button type="button" class="btn-ghost w-full" data-close-dialog>Cancel</button>
+    {% else %}
+    <a href="{{ cancel_url }}" class="btn-ghost w-full">Cancel</a>
+    {% endif %}
+  </div>
+</form>
+{%- endmacro %}

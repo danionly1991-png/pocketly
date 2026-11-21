@@ -1,0 +1,40 @@
+{#- Dashboard top bar: month, day, Analytics, "Spent this month" tab and profile menu. Included by dashboard.html (needs `view`). -#}
+{% from "components/macros.html" import accent, button, icon %}
+<div class="flex flex-wrap items-center gap-2 sm:gap-3">
+  <h1 class="mr-auto text-3xl font-extrabold tracking-tight sm:text-5xl">Your {{ accent("month.") }}</h1>
+  <div class="ml-auto sm:hidden">{% include "components/profile_menu.html" %}</div>
+</div>
+
+<div class="mt-5 flex flex-wrap items-center gap-2 sm:gap-3">
+  <form method="get" action="{{ url_for('expenses.dashboard') }}" data-autosubmit class="min-w-0">
+    <label for="month" class="sr-only">Month</label>
+    <select id="month" name="month" class="select-pill">
+      {% for value, label in view.month_options %}
+      <option value="{{ value }}"{% if value == view.month_value %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <noscript><button type="submit" class="btn-ghost btn-sm">Go</button></noscript>
+  </form>
+
+  <form method="get" action="{{ url_for('expenses.dashboard') }}" data-autosubmit class="flex min-w-0 items-center gap-2">
+    {% if not view.is_current_month %}<input type="hidden" name="month" value="{{ view.month_value }}">{% endif %}
+    <label for="day" class="sr-only">Day</label>
+    <input type="date" id="day" name="day" min="{{ view.date_min.isoformat() }}" max="{{ view.date_max.isoformat() }}" value="{{ view.day_value }}" class="form-input w-auto min-w-0 py-2 text-sm">
+    <noscript><button type="submit" class="btn-ghost btn-sm">Go</button></noscript>
+    {% if view.day %}
+    <a href="{{ url_for('expenses.dashboard', **month_params) }}" class="btn-ghost btn-sm">× All days</a>
+    {% else %}
+    <span class="text-sm text-ink-soft">All days</span>
+    {% endif %}
+  </form>
+
+  <a href="{{ url_for('placeholders.analytics') }}" class="btn-ghost btn-sm">{{ icon("chart", "h-4 w-4") }}Analytics</a>
+
+  <div class="card-dark spent-tab order-last w-full sm:order-none sm:ml-auto sm:w-auto">
+    <p class="text-xs text-cream/70">Spent in {{ view.today|month_name }}</p>
+    <p class="text-2xl font-extrabold tracking-tight">{{ view.totals.month_to_date|money }}</p>
+    <p class="text-xs text-cream/70">till {{ view.today|day_month }}</p>
+  </div>
+
+  <div class="hidden sm:block">{% include "components/profile_menu.html" %}</div>
+</div>
