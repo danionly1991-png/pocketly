@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import icon %}
+{% from "components/flash.html" import flash_messages %}
+{% from "components/category_icon.html" import category_icon %}
+{% from "components/confirm_dialog.html" import confirm_dialog %}
+
+{% block title %}{{ expense.amount|money }} · {{ expense.category.name }} · Pocketly{% endblock %}
+
+{% block content %}
+<section class="container-page py-6 sm:py-10">
+  <a href="{{ url_for('expenses.dashboard', **back_params) }}" class="btn-ghost btn-sm mb-4">{{ icon("arrow-left", "h-4 w-4") }}Back to dashboard</a>
+  <div class="mx-auto mb-4 max-w-3xl">{{ flash_messages() }}</div>
+
+  <div class="card mx-auto max-w-3xl sm:p-8">
+    <div class="grid gap-6 sm:grid-cols-[1fr_auto]">
+      <div class="min-w-0 space-y-4">
+        <p class="text-4xl font-extrabold tracking-tight sm:text-5xl">{{ expense.amount|money }}</p>
+        <p class="flex items-center gap-3 text-lg font-semibold">{{ category_icon(expense.category, "lg") }}<span class="min-w-0 break-words">{{ expense.category.name }}</span></p>
+        <p class="text-ink-soft">{{ expense.spent_on|long_date }}</p>
+      </div>
+      <div class="flex flex-col gap-2 sm:items-end">
+        <a href="{{ url_for('expenses.edit', expense_id=expense.id) }}" class="btn-dark w-full sm:w-auto">Edit expense</a>
+        {{ confirm_dialog("delete-expense", "Delete this expense?", "This can't be undone.", url_for('expenses.delete_expense', expense_id=expense.id), "Delete expense", "btn-ghost w-full text-ember-dark sm:w-auto") }}
+      </div>
+    </div>
+
+    <div class="note-box mt-6">
+      {% if expense.note %}{{ expense.note }}{% else %}<span class="text-ink-soft">No note added.</span>{% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/dialogs.js') }}" defer></script>{% endblock %}

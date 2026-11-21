@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import accent, icon %}
+{% from "components/flash.html" import flash_messages %}
+{% from "components/form_field.html" import field %}
+{% from "components/category_icon.html" import category_icon %}
+{% from "components/confirm_dialog.html" import confirm_dialog %}
+
+{% block title %}Categories · Pocketly{% endblock %}
+
+{% block content %}
+{% set selected_emoji = form.emoji.data or preset_emojis[0] %}
+<section class="container-page py-6 sm:py-10">
+  <a href="{{ url_for('expenses.dashboard') }}" class="btn-ghost btn-sm mb-4">{{ icon("arrow-left", "h-4 w-4") }}Back to dashboard</a>
+  <h1 class="text-3xl font-extrabold tracking-tight sm:text-5xl">Your {{ accent("categories.") }}</h1>
+  <div class="mt-4 max-w-xl">{{ flash_messages() }}</div>
+
+  <div class="mt-6 grid gap-6 lg:grid-cols-[1fr_380px] lg:items-start">
+    <ul class="space-y-3">
+      {% for row in rows %}
+      {% set c = row.category %}
+      <li class="flex flex-wrap items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-soft">
+        {{ category_icon(c) }}
+        <div class="min-w-0 flex-1">
+          <p class="flex flex-wrap items-center gap-2 font-semibold"><span class="break-words">{{ c.name }}</span>{% if c.is_default %}<span class="badge">Default</span>{% endif %}</p>
+          <p class="text-sm text-ink-soft">{{ row.expense_count }} expense{{ "" if row.expense_count == 1 else "s" }}</p>
+        </div>
+        <div class="flex items-center gap-1">
+          <a href="{{ url_for('categories.index', edit=c.id) }}#category-form" class="btn-ghost btn-sm">Edit</a>
+          {% if not c.is_fallback %}
+          {{ confirm_dialog("delete-cat-" ~ c.id, "Delete " ~ c.name ~ "?", row.delete_message, url_for('categories.delete', category_id=c.id), "Delete", "btn-ghost btn-sm text-ember-dark") }}
+          {% endif %}
+        </div>
+      </li>
+      {% else %}
+      <li class="card text-center text-ink-soft">Couldn't load your categories.</li>
+      {% endfor %}
+    </ul>
+
+    <div class="card" id="category-form">
+      <div class="flex items-center justify-between gap-2">
+        <h2 class="text-xl font-bold">{% if editing %}Edit {{ editing.name }}{% else %}Add a category{% endif %}</h2>
+        {% if editing %}<a href="{{ url_for('categories.index') }}" class="link-ember text-sm">Cancel edit</a>{% endif %}
+      </div>
+
+      <form method="post" enctype="multipart/form-data" action="{{ url_for('categories.update', category_id=editing.id) if editing else url_for('categories.create') }}" class="mt-5 space-y-5" novalidate>
+        {{ form.hidden_tag() }}
+        {{ field(form.name, autocomplete="off") }}
+
+        <fieldset class="space-y-3">
+          <legend class="form-label">Icon</legend>
+          <div class="flex gap-2">
+            <label class="category-chip flex-1 justify-center"><input type="radio" name="icon_type" value="emoji" class="sr-only"{% if form.icon_type.data != "image" %} checked{% endif %}>Emoji</label>
+            <label class="category-chip flex-1 justify-center"><input type="radio" name="icon_type" value="image" class="sr-only"{% if form.icon_type.data == "image" %} checked{% endif %}>Upload photo</label>
+          </div>
+          {% if form.icon_type.errors %}<p class="form-error">{{ form.icon_type.errors[0] }}</p>{% endif %}
+
+          <div class="grid grid-cols-6 gap-2">
+            {% for e in preset_emojis %}
+            <label class="emoji-chip"><input type="radio" name="emoji" value="{{ e }}" class="sr-only"{% if e == selected_emoji %} checked{% endif %}><span aria-hidden="true">{{ e }}</span><span class="sr-only">Emoji {{ e }}</span></label>
+            {% endfor %}
+          </div>
+          {% if form.emoji.errors %}<p class="form-error">{{ form.emoji.errors[0] }}</p>{% endif %}
+
+          <div>
+            <label for="photo" class="form-label">Photo</label>
+            <div class="flex items-center gap-3">
+              <img data-icon-preview alt="" width="64" height="64" class="h-16 w-16 rounded-full object-cover"{% if editing and editing.icon_type == "image" %} src="{{ editing.icon_url }}"{% else %} hidden{% endif %}>
+              <input type="file" id="photo" name="photo" accept="image/*" class="min-w-0 flex-1 text-sm">
+            </div>
+            <p class="mt-1.5 text-xs text-ink-soft">JPG, PNG or WEBP, up to 2 MB.</p>
+            {% if form.photo.errors %}<p class="form-error">{{ form.photo.errors[0] }}</p>{% endif %}
+          </div>
+        </fieldset>
+
+        <button type="submit" class="btn-primary w-full">{% if editing %}Save changes{% else %}Add category{% endif %}</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dialogs.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/category-form.js') }}" defer></script>
+{% endblock %}

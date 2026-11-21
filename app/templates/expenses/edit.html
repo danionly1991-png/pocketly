@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import icon %}
+{% from "components/flash.html" import flash_messages %}
+{% from "components/expense_form.html" import expense_form %}
+
+{% block title %}Edit expense · Pocketly{% endblock %}
+
+{% block content %}
+<section class="container-page py-6 sm:py-10">
+  <a href="{{ url_for('expenses.detail', expense_id=expense.id) }}" class="btn-ghost btn-sm mb-4">{{ icon("arrow-left", "h-4 w-4") }}Back to expense</a>
+  <div class="mx-auto mb-4 max-w-lg">{{ flash_messages() }}</div>
+
+  <div class="card mx-auto max-w-lg sm:p-8">
+    <h1 class="mb-6 text-2xl font-extrabold tracking-tight sm:text-3xl">Edit expense</h1>
+    {{ expense_form(form, categories, url_for('expenses.edit', expense_id=expense.id), "Save changes", today_iso, cancel_url=url_for('expenses.detail', expense_id=expense.id)) }}
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/expense-form.js') }}" defer></script>{% endblock %}
