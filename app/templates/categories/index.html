@@ -54,14 +54,16 @@
           </div>
           {% if form.icon_type.errors %}<p class="form-error">{{ form.icon_type.errors[0] }}</p>{% endif %}
 
+          <div data-icon-panel="emoji">
           <div class="grid grid-cols-6 gap-2">
             {% for e in preset_emojis %}
             <label class="emoji-chip"><input type="radio" name="emoji" value="{{ e }}" class="sr-only"{% if e == selected_emoji %} checked{% endif %}><span aria-hidden="true">{{ e }}</span><span class="sr-only">Emoji {{ e }}</span></label>
             {% endfor %}
           </div>
           {% if form.emoji.errors %}<p class="form-error">{{ form.emoji.errors[0] }}</p>{% endif %}
+          </div>
 
-          <div>
+          <div data-icon-panel="image">
             <label for="photo" class="form-label">Photo</label>
             <div class="flex items-center gap-3">
               <img data-icon-preview alt="" width="64" height="64" class="h-16 w-16 rounded-full object-cover"{% if editing and editing.icon_type == "image" %} src="{{ editing.icon_url }}"{% else %} hidden{% endif %}>
