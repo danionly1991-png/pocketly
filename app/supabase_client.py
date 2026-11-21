@@ -15,6 +15,12 @@ The client is stateless on purpose:
 
 If the keys are missing, a warning is logged and `None` is returned so the app
 keeps running. Callers must handle `None`.
+
+There are two per-request clients:
+- `get_supabase()`: anon key only, used for Supabase Auth (sign in, refresh, ...).
+- `get_user_supabase(token)`: anon key plus the logged-in user's access token in the
+  `Authorization` header, used for tables, RPC and Storage so Row Level Security
+  applies as that user. The service_role key is never used.
 """
 
 from flask import current_app, g
@@ -42,3 +48,34 @@ def get_supabase():
         options=ClientOptions(flow_type="implicit", persist_session=False, auto_refresh_token=False),
     )
     return g._supabase
+
+
+def get_user_supabase(access_token: str | None):
+    """Client that sends the user's JWT, so RLS applies as that user. None if unavailable.
+
+    The caller passes the token (this module must not import `auth_utils`: import cycle).
+    """
+    if not access_token:
+        return None
+
+    client = g.get("_supabase_user")
+    if client is not None:
+        return client
+
+    if not supabase_configured():
+        current_app.logger.warning("Supabase is not configured (SUPABASE_URL / SUPABASE_ANON_KEY missing).")
+        return None
+
+    from supabase import ClientOptions, create_client
+
+    g._supabase_user = create_client(
+        current_app.config["SUPABASE_URL"],
+        current_app.config["SUPABASE_ANON_KEY"],
+        options=ClientOptions(
+            headers={"Authorization": f"Bearer {access_token}"},
+            flow_type="implicit",
+            persist_session=False,
+            auto_refresh_token=False,
+        ),
+    )
+    return g._supabase_user

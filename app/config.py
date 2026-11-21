@@ -60,3 +60,6 @@ class Config:
 
     # The CSRF token lives as long as the session cookie, so open forms don't expire.
     WTF_CSRF_TIME_LIMIT = None
+
+    # Reject request bodies over 3 MB (413). Above the 2 MB icon rule, below Vercel's 4.5 MB limit.
+    MAX_CONTENT_LENGTH = 3 * 1024 * 1024
