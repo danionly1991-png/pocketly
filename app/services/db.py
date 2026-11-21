@@ -45,9 +45,11 @@ def user_client():
 
 
 def friendly(error: Exception) -> DataError:
-    """Translate any Supabase / network error into a DataError. Logs the type and code only."""
+    """Translate any Supabase / network error into a DataError. Logs the error type and code (plus the short message for Storage errors); never row data."""
     code = getattr(error, "code", None)
-    logger.warning("Data request failed: %s code=%s", type(error).__name__, code)
+    # Storage errors carry a short, non-sensitive message (e.g. "Bucket not found"): log it to help debugging.
+    detail = str(error)[:200] if isinstance(error, StorageException) else ""
+    logger.warning("Data request failed: %s code=%s %s", type(error).__name__, code, detail)
 
     if isinstance(error, APIError):
         if code == "23505":
