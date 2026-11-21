@@ -1,4 +1,4 @@
-"""Auth routes: sign up, email verification, login, logout, password reset, dashboard.
+"""Auth routes: sign up, email verification, login, logout, password reset.
 
 Routes stay thin: validate the form, call `app.services.auth_service`, flash, redirect.
 """
@@ -6,7 +6,7 @@ Routes stay thin: validate the form, call `app.services.auth_service`, flash, re
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
 from app import auth_utils
-from app.auth_utils import logged_out_only, login_required, safe_next
+from app.auth_utils import logged_out_only, safe_next
 from app.forms import ForgotPasswordForm, LoginForm, ResendForm, ResetPasswordForm, SignupForm
 from app.services import auth_service
 from app.services.auth_service import AuthError
@@ -83,7 +83,7 @@ def _complete_link(kind: str, data: auth_service.SessionData) -> str:
     if kind == "signup":
         auth_utils.save_login(data)
         flash("Email verified. Welcome to Pocketly!", "success")
-        return url_for("auth.dashboard")
+        return url_for("expenses.dashboard")
 
     # Recovery: keep the tokens apart from `auth`, so the user isn't logged in
     # until they have set a new password.
@@ -181,7 +181,7 @@ def login():
                 show_resend = True
         else:
             auth_utils.save_login(data)
-            return redirect(next_url or url_for("auth.dashboard"))
+            return redirect(next_url or url_for("expenses.dashboard"))
 
     return render_template("auth/login.html", form=form, next_url=next_url, show_resend=show_resend)
 
@@ -243,14 +243,5 @@ def reset_password():
         else:
             auth_utils.save_login(data)  # also drops the recovery tokens
             flash("Password updated.", "success")
-            return redirect(url_for("auth.dashboard"))
+            return redirect(url_for("expenses.dashboard"))
     return render_template("auth/reset_password.html", form=form)
-
-
-# --- Dashboard placeholder --------------------------------------------------
-
-
-@auth_bp.route("/dashboard")
-@login_required
-def dashboard():
-    return render_template("dashboard.html")

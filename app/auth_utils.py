@@ -27,6 +27,11 @@ class CurrentUser:
     email: str
     name: str
 
+    @property
+    def initial(self) -> str:
+        """First letter for the profile circle."""
+        return (self.name or self.email or "?")[:1].upper()
+
 
 def save_login(data: auth_service.SessionData) -> None:
     """Start a fresh session for this user. Clearing first prevents session fixation."""
@@ -98,7 +103,7 @@ def logged_out_only(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if current_user() is not None:
-            return redirect(url_for("auth.dashboard"))
+            return redirect(url_for("expenses.dashboard"))
         return view(*args, **kwargs)
 
     return wrapped

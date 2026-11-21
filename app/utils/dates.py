@@ -134,6 +134,12 @@ def day_name(d: date) -> str:
     return f"{d:%A}"
 
 
+def iso_day_name(value: str | None) -> str:
+    """Weekday for an ISO date string ("Saturday"), or "" if it isn't a valid date."""
+    parsed = parse_iso_date(value)
+    return day_name(parsed) if parsed else ""
+
+
 def register_filters(app: Flask) -> None:
-    for fn in (money, amount_input, short_date, long_date, month_label, month_name, day_month, day_name):
+    for fn in (money, amount_input, short_date, long_date, month_label, month_name, day_month, day_name, iso_day_name):
         app.add_template_filter(fn, fn.__name__)

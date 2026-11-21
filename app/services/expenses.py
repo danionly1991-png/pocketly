@@ -57,6 +57,15 @@ class DashboardView:
     date_min: date  # day picker limits
     date_max: date
 
+    @property
+    def month_value(self) -> str:
+        """The `?month=` value for this view, e.g. "2026-11"."""
+        return f"{self.month:%Y-%m}"
+
+    @property
+    def day_value(self) -> str:
+        return self.day.isoformat() if self.day else ""
+
 
 def _to_expense(row: dict) -> Expense:
     return Expense(
@@ -190,6 +199,28 @@ def build_dashboard(month_param: str | None, day_param: str | None) -> Dashboard
         month_options=month_options(min(totals.first_month, month), current),
         expenses=expenses,
         totals=totals,
+        date_min=month,
+        date_max=today if is_current else month_end(month),
+    )
+
+
+def empty_view(month_param: str | None, day_param: str | None) -> DashboardView:
+    """The dashboard with no data, for when the database can't be reached (no network calls)."""
+    today = karachi_today()
+    current = month_start(today)
+    month = parse_month_param(month_param, current) or current
+    day = parse_day_param(day_param, month, today)
+    is_current = month == current
+    zero = Decimal("0")
+    return DashboardView(
+        today=today,
+        current_month=current,
+        month=month,
+        day=day,
+        is_current_month=is_current,
+        month_options=month_options(month, current),
+        expenses=[],
+        totals=Totals(first_month=month, month_to_date=zero, view_total=zero),
         date_min=month,
         date_max=today if is_current else month_end(month),
     )
