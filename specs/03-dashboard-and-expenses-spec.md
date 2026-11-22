@@ -18,7 +18,7 @@ Replace the dashboard placeholder with the real Pocketly home screen. A logged-i
    - a **Month** selector (view any past month)
    - a **calendar button** next to the month (view a single day; picking a day in another month switches to that month)
    - an **Analytics** button that opens a coming-soon page
-   - a **"Spent this month"** total tab
+   - a **"Spent in {month}"** summary for the selected month
    - a round **profile / logout** button
 2. **Add expense:** a floating "+" button that opens an add-expense panel (amount, category, date, note).
 3. **Expense detail:** clicking an expense row opens a detail view with **Edit expense** and **Delete expense**.
@@ -157,7 +157,7 @@ All routes below are `login_required` (from Spec 02). Put them in a new blueprin
 | **Month** selector | Dropdown of months, from the month of the user's first expense (or their signup month) up to the current month. No future months. Changing it reloads with `?month=` and clears `day`. Label, e.g. "November 2026 ▾" |
 | **Calendar** button | Replaces the old "Pick a day" label and full-width date input. A round 44px icon button (calendar-days outline icon, `aria-label="Pick a day"`) on the same row as the ‹ month › picker, at the far right, on every screen size (it never wraps onto its own row). White with a `cream-dark` border and no shadow; `ember` border/icon on hover and the `ember` focus ring. Clicking it opens the browser's own date picker straight away: a visually hidden (not `display:none`) native `<input type="date">` sits behind it, and `dashboard.js` calls `showPicker()`, falling back to `focus()` + `click()` where that isn't supported. The range is the user's first month up to today, so any past day can be picked. Picking a day loads `?day=YYYY-MM-DD` only, which shows that day's expenses and switches the month header to the day's month. While a day is selected the button is filled `ember`, and a removable chip under the "Spent in" total ("Sun, 22 Nov ×" · "Rs X spent that day") shows the day; the chip's × (or the picker's own Clear) goes back to the whole month |
 | **Analytics** | Ghost button → `/analytics` (coming soon) |
-| **Spent this month** tab | Top-right. See 7.2 |
+| **Spent in {month}** summary | Under the month picker. Follows the selected month. See 7.2 |
 | **Profile circle** | Round button with the user's initial. Clicking it opens a small menu with the name, email and a **Log out** button (POST, from Spec 02) |
 
 Month and day changes submit a small GET form automatically (a few lines of vanilla JS). The page must still work if JS is off: a `<noscript>` row shows a plain date input with a "Go" button.
@@ -176,15 +176,19 @@ Month and day changes submit a small GET form automatically (a few lines of vani
 - When a day is selected, show a removable chip above the list: "{Sat, 21 Nov} ×" · "Rs X spent that day".
 - **Floating "+" button:** fixed at the bottom-right of the screen (`btn-primary`, round, ember), opens the Add Expense panel.
 
-### 7.2 "Spent this month" tab
+### 7.2 "Spent in {month}" summary
 
-- A small `card-dark` tab in the top-right of the top bar, next to the profile circle. On mobile it becomes a full-width strip under the top bar.
+- The big summary under the ‹ month › picker. It always reflects the **selected month** (the one in the header), never just the current month.
 - Shows:
-  - label "Spent in {November}"
-  - the big amount, e.g. **Rs 6,450**
-  - small text "till {22 Nov}"
-- It always shows the **current month's total from day 1 up to today**, whatever month or day is being viewed, because it's the user's running total.
-- When a past month is selected, add a secondary line under the list header: "Total for {October 2026}: Rs X".
+  - label "Spent in {selected month name}", e.g. "Spent in October"
+  - the big amount: the total of **all** expenses in the selected month, e.g. **Rs 6,000**
+  - a date range line under the amount:
+    - current month: from the 1st to today (Karachi time), e.g. "1–22 Nov"
+    - past month: the whole month, ending on that month's real last day, e.g. "1–31 Oct", "1–30 Nov", "1–28 Feb" or "1–29 Feb" in a leap year
+- The total covers the same date range (the 1st to the month's last day) as the query that fills the month's expense list, so the summary and the list can't disagree.
+- A month with no expenses shows "Rs 0" with its date range, plus the list's empty state.
+- When a day is selected, the summary still shows the whole month; the day's own total is in the day chip ("Rs X spent that day").
+- There is no separate "Total for {October 2026}: Rs X" line: the summary replaces it.
 - Compute totals with a database `sum()` query, not by adding values in Python from paged rows.
 
 ### 7.3 Add expense panel
@@ -329,7 +333,7 @@ Update `requirements.txt` (add `Pillow`; pin versions), `README.md` (migrations,
 - [ ] `/dashboard` shows the current month's expenses, newest first, each with No., category (icon + name), amount and date/day.
 - [ ] The Month selector shows past months up to the current one and switches the list.
 - [ ] The calendar button (same row as the month, at 375px and 1440px) opens the native date picker in one tap or click. Picking a day filters to that day (switching month if needed), the button turns filled `ember`, and the chip's × goes back to the whole month.
-- [ ] The "Spent this month" tab shows the correct current-month total up to today, in Karachi time.
+- [ ] The "Spent in {month}" summary always matches the selected month: on the current month it shows the total with "1–{today}" (Karachi time); on a past month the whole month's total with "1–{last day}" (28/29/30/31). It updates with the ‹ › arrows, the month dropdown, a calendar pick in another month, and after adding, editing or deleting an expense in a past month. There is no extra "Total for {month}" line.
 - [ ] Analytics opens the coming-soon page.
 - [ ] The profile circle opens a menu with Log out (POST) and Manage categories.
 - [ ] Empty states show correctly.

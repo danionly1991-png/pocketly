@@ -1,5 +1,5 @@
 {#- Dashboard header: one row with the ‹ month › picker (the visual heading) and the calendar button,
-    then the running "Spent in {month}" total. Included by dashboard.html (needs `view`, `month_params`).
+    then the "Spent in {month}" summary for the selected month. Included by dashboard.html (needs `view`, `month_params`).
     The calendar button opens a visually hidden native date input (showPicker() in dashboard.js); picking a
     day sends only `?day=`, so a day in another month switches the month too. -#}
 {% from "components/macros.html" import amount, icon %}
@@ -29,9 +29,9 @@
   </form>
 </noscript>
 
-{#- Always the current month, day 1 up to today, whatever is being viewed (Spec 03 §7.2). -#}
+{#- The selected month (Spec 03 §7.2): its whole total, dated 1–today (current month) or 1–last day (past month). -#}
 <div class="mt-5 sm:mt-6">
-  <p class="text-sm text-ink-soft">Spent in {{ view.today|month_name }}</p>
-  <p class="mt-2 text-display sm:text-hero">{{ amount(view.totals.month_to_date) }}</p>
-  <p class="mt-2 text-sm text-ink-soft">{{ view.current_month|day_range_label(view.today) }}</p>
+  <p class="text-sm text-ink-soft">Spent in {{ view.month|month_name }}</p>
+  <p class="mt-2 text-display sm:text-hero">{{ amount(view.totals.month_total) }}</p>
+  <p class="mt-2 text-sm text-ink-soft">{{ view.month|day_range_label(view.summary_to) }}</p>
 </div>

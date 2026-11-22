@@ -41,8 +41,8 @@ class Expense:
 @dataclass(frozen=True)
 class Totals:
     first_month: date
-    month_to_date: Decimal  # current month, day 1 .. today (the "Spent this month" tab)
-    view_total: Decimal  # the viewed month, or the selected day
+    month_total: Decimal  # the selected month, all of it (the "Spent in {month}" summary)
+    day_total: Decimal | None  # the selected day (the chip), or None when no day is selected
 
 
 @dataclass(frozen=True)
@@ -83,6 +83,11 @@ class DashboardView:
     def next_month(self) -> date | None:
         """Target of the › arrow, or None on the current month."""
         return adjacent_months(self.month, self.first_month, self.current_month)[1]
+
+    @property
+    def summary_to(self) -> date:
+        """Last day of the summary's date range: today for the current month, else the month's last day."""
+        return self.today if self.is_current_month else month_end(self.month)
 
     @property
     def day_value(self) -> str:
@@ -175,7 +180,9 @@ def delete_expense(expense_id: str) -> date | None:
     return date.fromisoformat(rows[0]["spent_on"]) if rows else None
 
 
-def dashboard_totals(today: date, view_from: date, view_to: date) -> Totals:
+def dashboard_totals(today: date, month: date) -> tuple[date, Decimal]:
+    """(first available month, total of the whole selected `month`), as one database sum().
+    The sum covers `month` .. its last day, the same range `list_expenses` reads for the month list."""
     try:
         rows = (
             user_client()
@@ -183,8 +190,8 @@ def dashboard_totals(today: date, view_from: date, view_to: date) -> Totals:
                 "dashboard_totals",
                 {
                     "p_today": today.isoformat(),
-                    "p_view_from": view_from.isoformat(),
-                    "p_view_to": view_to.isoformat(),
+                    "p_view_from": month.isoformat(),
+                    "p_view_to": month_end(month).isoformat(),
                 },
             )
             .execute()
@@ -193,11 +200,8 @@ def dashboard_totals(today: date, view_from: date, view_to: date) -> Totals:
     except CAUGHT as error:
         raise friendly(error) from None
     row = rows[0] if isinstance(rows, list) else rows
-    return Totals(
-        first_month=date.fromisoformat(row["first_month"]),
-        month_to_date=to_decimal(row["month_to_date_total"]),
-        view_total=to_decimal(row["view_total"]),
-    )
+    # month_to_date_total (current month to today) is no longer used: the summary follows the selected month.
+    return date.fromisoformat(row["first_month"]), to_decimal(row["view_total"])
 
 
 def day_totals(start: date, end: date) -> dict[date, Decimal]:
@@ -232,11 +236,15 @@ def build_dashboard(month_param: str | None, day_param: str | None) -> Dashboard
     month, day = resolve_month_and_day(month_param, day_param, today)
     is_current = month == current
 
+    # One selected month drives everything: the list's range, the summary total and its date range.
     view_from, view_to = (day, day) if day else (month, month_end(month))
     expenses = list_expenses(view_from, view_to)
-    totals = dashboard_totals(today, view_from, view_to)
-    groups = group_by_day(expenses, day_totals(view_from, view_to)) if expenses else []
-    first_month = min(month_start(totals.first_month), month)
+    data_first_month, month_total = dashboard_totals(today, month)
+    per_day = day_totals(view_from, view_to) if expenses else {}
+    groups = group_by_day(expenses, per_day)
+    day_total = per_day.get(day, Decimal("0")) if day else None
+    totals = Totals(first_month=data_first_month, month_total=month_total, day_total=day_total)
+    first_month = min(month_start(data_first_month), month)
 
     return DashboardView(
         today=today,
@@ -271,7 +279,7 @@ def empty_view(month_param: str | None, day_param: str | None) -> DashboardView:
         month_options=month_options(month, current),
         expenses=[],
         day_groups=[],
-        totals=Totals(first_month=month, month_to_date=zero, view_total=zero),
+        totals=Totals(first_month=month, month_total=zero, day_total=zero if day else None),
         date_min=month,
         date_max=today,
     )
