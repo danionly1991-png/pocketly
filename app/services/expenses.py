@@ -21,8 +21,7 @@ from app.utils.dates import (
     month_end,
     month_options,
     month_start,
-    parse_day_param,
-    parse_month_param,
+    resolve_month_and_day,
     to_decimal,
 )
 
@@ -67,7 +66,7 @@ class DashboardView:
     expenses: list[Expense]
     day_groups: list[DayGroup]
     totals: Totals
-    date_min: date  # day picker limits
+    date_min: date  # calendar button limits: first month with data .. today (any month can be picked)
     date_max: date
 
     @property
@@ -230,8 +229,7 @@ def build_dashboard(month_param: str | None, day_param: str | None) -> Dashboard
     """Everything the dashboard page needs. Invalid month/day params are silently ignored."""
     today = karachi_today()
     current = month_start(today)
-    month = parse_month_param(month_param, current) or current
-    day = parse_day_param(day_param, month, today)
+    month, day = resolve_month_and_day(month_param, day_param, today)
     is_current = month == current
 
     view_from, view_to = (day, day) if day else (month, month_end(month))
@@ -251,8 +249,8 @@ def build_dashboard(month_param: str | None, day_param: str | None) -> Dashboard
         expenses=expenses,
         day_groups=groups,
         totals=totals,
-        date_min=month,
-        date_max=today if is_current else month_end(month),
+        date_min=first_month,
+        date_max=today,
     )
 
 
@@ -260,8 +258,7 @@ def empty_view(month_param: str | None, day_param: str | None) -> DashboardView:
     """The dashboard with no data, for when the database can't be reached (no network calls)."""
     today = karachi_today()
     current = month_start(today)
-    month = parse_month_param(month_param, current) or current
-    day = parse_day_param(day_param, month, today)
+    month, day = resolve_month_and_day(month_param, day_param, today)
     is_current = month == current
     zero = Decimal("0")
     return DashboardView(
@@ -276,5 +273,5 @@ def empty_view(month_param: str | None, day_param: str | None) -> DashboardView:
         day_groups=[],
         totals=Totals(first_month=month, month_to_date=zero, view_total=zero),
         date_min=month,
-        date_max=today if is_current else month_end(month),
+        date_max=today,
     )

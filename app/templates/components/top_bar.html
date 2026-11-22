@@ -1,31 +1,37 @@
-{#- Dashboard header: ‹ month › picker (the visual heading), the running "Spent in {month}" total, and the day filter.
-    Included by dashboard.html (needs `view`, `month_params`). -#}
+{#- Dashboard header: one row with the ‹ month › picker (the visual heading) and the calendar button,
+    then the running "Spent in {month}" total. Included by dashboard.html (needs `view`, `month_params`).
+    The calendar button opens a visually hidden native date input (showPicker() in dashboard.js); picking a
+    day sends only `?day=`, so a day in another month switches the month too. -#}
 {% from "components/macros.html" import amount, icon %}
 {% from "components/month_picker.html" import month_picker %}
 <h1 class="sr-only">Expenses, {{ view.month|month_label }}</h1>
 
-{{ month_picker(
-  url_for('expenses.dashboard'),
-  view.month_options,
-  view.month_value,
-  url_for('expenses.dashboard', month=view.prev_month|month_value) if view.prev_month else None,
-  url_for('expenses.dashboard', month=view.next_month|month_value) if view.next_month else None,
-) }}
+<div class="flex items-center justify-between gap-2">
+  {{ month_picker(
+    url_for('expenses.dashboard'),
+    view.month_options,
+    view.month_value,
+    url_for('expenses.dashboard', month=view.prev_month|month_value) if view.prev_month else None,
+    url_for('expenses.dashboard', month=view.next_month|month_value) if view.next_month else None,
+  ) }}
 
-<div class="mt-5 flex flex-wrap items-end justify-between gap-x-8 gap-y-6 sm:mt-6">
-  {#- Always the current month, day 1 up to today, whatever is being viewed (Spec 03 §7.2). -#}
-  <div class="min-w-0">
-    <p class="text-sm text-ink-soft">Spent in {{ view.today|month_name }}</p>
-    <p class="mt-2 text-display sm:text-hero">{{ amount(view.totals.month_to_date) }}</p>
-    <p class="mt-2 text-sm text-ink-soft">{{ view.current_month|day_range_label(view.today) }}</p>
-  </div>
-
-  <form method="get" action="{{ url_for('expenses.dashboard') }}" data-autosubmit class="w-full min-w-0 sm:w-auto">
-    {% if not view.is_current_month %}<input type="hidden" name="month" value="{{ view.month_value }}">{% endif %}
-    <label for="day" class="form-label text-ink-soft">Pick a day</label>
-    <div class="flex items-center gap-2">
-      <input type="date" id="day" name="day" min="{{ view.date_min.isoformat() }}" max="{{ view.date_max.isoformat() }}" value="{{ view.day_value }}" class="form-input min-w-0 py-2.5 text-sm sm:w-48">
-      <noscript><button type="submit" class="btn-outline btn-sm">Go</button></noscript>
-    </div>
+  <form method="get" action="{{ url_for('expenses.dashboard') }}" class="relative shrink-0" data-day-picker data-clear-url="{{ url_for('expenses.dashboard', **month_params) }}">
+    <button type="button" class="day-button" data-day-button aria-label="Pick a day"{% if view.day %} data-active{% endif %}>{{ icon("calendar-days") }}</button>
+    <input type="date" name="day" min="{{ view.date_min.isoformat() }}" max="{{ view.date_max.isoformat() }}" value="{{ view.day_value }}" class="day-picker-input" tabindex="-1" aria-label="Pick a day">
   </form>
+</div>
+
+<noscript>
+  <form method="get" action="{{ url_for('expenses.dashboard') }}" class="mt-3 flex items-center gap-2">
+    <label for="day-nojs" class="sr-only">Pick a day</label>
+    <input type="date" id="day-nojs" name="day" min="{{ view.date_min.isoformat() }}" max="{{ view.date_max.isoformat() }}" value="{{ view.day_value }}" class="form-input w-auto py-2 text-sm">
+    <button type="submit" class="btn-outline btn-sm">Go</button>
+  </form>
+</noscript>
+
+{#- Always the current month, day 1 up to today, whatever is being viewed (Spec 03 §7.2). -#}
+<div class="mt-5 sm:mt-6">
+  <p class="text-sm text-ink-soft">Spent in {{ view.today|month_name }}</p>
+  <p class="mt-2 text-display sm:text-hero">{{ amount(view.totals.month_to_date) }}</p>
+  <p class="mt-2 text-sm text-ink-soft">{{ view.current_month|day_range_label(view.today) }}</p>
 </div>

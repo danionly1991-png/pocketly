@@ -72,6 +72,19 @@ def parse_day_param(value: str | None, month: date, today: date) -> date | None:
     return day
 
 
+def resolve_month_and_day(month_param: str | None, day_param: str | None, today: date) -> tuple[date, date | None]:
+    """The dashboard's (month, day). A valid `month` wins and `day` must sit inside it.
+    With no valid `month`, a valid past `day` brings its own month, so the calendar button can jump months."""
+    current = month_start(today)
+    month = parse_month_param(month_param, current)
+    if month is not None:
+        return month, parse_day_param(day_param, month, today)
+    day = parse_iso_date(day_param)
+    if day is not None and EARLIEST_MONTH <= day <= today:
+        return month_start(day), day
+    return current, None
+
+
 def parse_iso_date(value: str | None) -> date | None:
     if not value or not _DAY_RE.match(value):
         return None

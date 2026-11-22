@@ -231,6 +231,22 @@
     @apply cursor-not-allowed text-ink-soft/30 hover:bg-transparent;
   }
 
+  /* Dashboard calendar button (Spec 03 §7.1): sits on the page, so a border and no shadow.
+     Filled ember while a day is selected. */
+  .day-button {
+    @apply inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-cream-dark bg-white text-ink transition-colors hover:border-ember hover:text-ember;
+  }
+
+  .day-button[data-active] {
+    @apply border-ember bg-ember text-white hover:border-ember-dark hover:bg-ember-dark hover:text-white;
+  }
+
+  /* The native date input behind the calendar button: rendered (so showPicker() works and the
+     desktop popup anchors to the button) but invisible and not clickable. */
+  .day-picker-input {
+    @apply pointer-events-none absolute inset-0 h-full w-full opacity-0;
+  }
+
   .avatar {
     @apply flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full bg-ink font-semibold text-cream [&::-webkit-details-marker]:hidden;
   }

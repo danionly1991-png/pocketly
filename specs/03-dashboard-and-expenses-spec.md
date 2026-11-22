@@ -16,7 +16,7 @@ Replace the dashboard placeholder with the real Pocketly home screen. A logged-i
 
 1. **Dashboard:** a list of expenses for the current month by default, plus a top bar with:
    - a **Month** selector (view any past month)
-   - a **Date** picker (view a single day of the selected month)
+   - a **calendar button** next to the month (view a single day; picking a day in another month switches to that month)
    - an **Analytics** button that opens a coming-soon page
    - a **"Spent this month"** total tab
    - a round **profile / logout** button
@@ -127,7 +127,7 @@ All routes below are `login_required` (from Spec 02). Put them in a new blueprin
 
 | Route | Method | What it does |
 |---|---|---|
-| `/dashboard` | GET | Expense list. Query params: `month=YYYY-MM` (default: current month), `day=YYYY-MM-DD` (optional, must be inside `month`) |
+| `/dashboard` | GET | Expense list. Query params: `month=YYYY-MM` (default: current month), `day=YYYY-MM-DD` (optional; inside `month` when both are sent, and with `day` alone the view switches to that day's month) |
 | `/expenses` | POST | Create an expense, then redirect back to the dashboard (same month/day view) with "Expense added." |
 | `/expenses/<id>` | GET | Expense detail view |
 | `/expenses/<id>/edit` | GET, POST | Edit form (pre-filled), then redirect to the detail view with "Expense updated." |
@@ -139,7 +139,7 @@ All routes below are `login_required` (from Spec 02). Put them in a new blueprin
 | `/analytics` | GET | Coming-soon page, with "← Back to dashboard" |
 
 - An unknown or another user's `<id>` returns the styled 404. RLS returns no row, so this happens naturally.
-- Invalid `month` or `day` params (bad format, a future month, a day outside the month) fall back to the default view without crashing.
+- Invalid `month` or `day` params (bad format, a future month or day, a day outside the given `month`) fall back to the default view without crashing.
 - Every POST form has a CSRF token. Delete is POST only.
 
 ---
@@ -155,12 +155,12 @@ All routes below are `login_required` (from Spec 02). Put them in a new blueprin
 | Item | Behaviour |
 |---|---|
 | **Month** selector | Dropdown of months, from the month of the user's first expense (or their signup month) up to the current month. No future months. Changing it reloads with `?month=` and clears `day`. Label, e.g. "November 2026 ▾" |
-| **Date** picker | Combines the old "date" and "day" items. Native `<input type="date">` limited to the selected month (`min` = 1st, `max` = last day or today for the current month). Picking a day shows only that day's expenses. Shows "All days" when no day is picked, and an "×" / "All days" button clears it |
+| **Calendar** button | Replaces the old "Pick a day" label and full-width date input. A round 44px icon button (calendar-days outline icon, `aria-label="Pick a day"`) on the same row as the ‹ month › picker, at the far right, on every screen size (it never wraps onto its own row). White with a `cream-dark` border and no shadow; `ember` border/icon on hover and the `ember` focus ring. Clicking it opens the browser's own date picker straight away: a visually hidden (not `display:none`) native `<input type="date">` sits behind it, and `dashboard.js` calls `showPicker()`, falling back to `focus()` + `click()` where that isn't supported. The range is the user's first month up to today, so any past day can be picked. Picking a day loads `?day=YYYY-MM-DD` only, which shows that day's expenses and switches the month header to the day's month. While a day is selected the button is filled `ember`, and a removable chip under the "Spent in" total ("Sun, 22 Nov ×" · "Rs X spent that day") shows the day; the chip's × (or the picker's own Clear) goes back to the whole month |
 | **Analytics** | Ghost button → `/analytics` (coming soon) |
 | **Spent this month** tab | Top-right. See 7.2 |
 | **Profile circle** | Round button with the user's initial. Clicking it opens a small menu with the name, email and a **Log out** button (POST, from Spec 02) |
 
-Month and day changes can submit a small GET form automatically (a few lines of vanilla JS). The page must still work if JS is off (show a small "Go" button inside `<noscript>`).
+Month and day changes submit a small GET form automatically (a few lines of vanilla JS). The page must still work if JS is off: a `<noscript>` row shows a plain date input with a "Go" button.
 
 **Expense list:** each expense is one full-width clickable bar (a `card`), and the whole bar links to `/expenses/<id>`.
 
@@ -173,7 +173,7 @@ Month and day changes can submit a small GET form automatically (a few lines of 
 - **Empty states:**
   - Current month, no expenses: "No expenses yet this month. Tap + to add your first one."
   - Selected day, no expenses: "Nothing spent on {date}."
-- When a day is selected, show a small line above the list: "Showing {Sat, 21 Nov} · Rs X that day".
+- When a day is selected, show a removable chip above the list: "{Sat, 21 Nov} ×" · "Rs X spent that day".
 - **Floating "+" button:** fixed at the bottom-right of the screen (`btn-primary`, round, ember), opens the Add Expense panel.
 
 ### 7.2 "Spent this month" tab
@@ -328,7 +328,7 @@ Update `requirements.txt` (add `Pillow`; pin versions), `README.md` (migrations,
 **Dashboard**
 - [ ] `/dashboard` shows the current month's expenses, newest first, each with No., category (icon + name), amount and date/day.
 - [ ] The Month selector shows past months up to the current one and switches the list.
-- [ ] The Date picker filters to one day of the selected month, and "All days" clears it.
+- [ ] The calendar button (same row as the month, at 375px and 1440px) opens the native date picker in one tap or click. Picking a day filters to that day (switching month if needed), the button turns filled `ember`, and the chip's × goes back to the whole month.
 - [ ] The "Spent this month" tab shows the correct current-month total up to today, in Karachi time.
 - [ ] Analytics opens the coming-soon page.
 - [ ] The profile circle opens a menu with Log out (POST) and Manage categories.
