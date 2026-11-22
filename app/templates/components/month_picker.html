@@ -1,0 +1,29 @@
+{#- ‹ Month ▾ › picker shared by the dashboard and analytics (Spec 04).
+    Import with: {% from "components/month_picker.html" import month_picker %}
+    action: form URL · options: [(value, label)] · selected: "YYYY-MM" · prev_url/next_url: None = arrow disabled.
+    The dropdown auto-submits via dashboard.js (form[data-autosubmit]); the arrows are plain links. -#}
+{% from "components/macros.html" import icon %}
+
+{% macro month_picker(action, options, selected, prev_url=None, next_url=None, extra="") -%}
+<div class="month-picker {{ extra }}">
+  {%- if prev_url %}
+  <a href="{{ prev_url }}" class="month-arrow" aria-label="Previous month">{{ icon("chevron-left") }}</a>
+  {%- else %}
+  <span class="month-arrow" role="link" aria-disabled="true" aria-label="Previous month">{{ icon("chevron-left") }}</span>
+  {%- endif %}
+  <form method="get" action="{{ action }}" data-autosubmit class="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
+    <label for="month" class="sr-only">Month</label>
+    <select id="month" name="month" class="select-pill w-full sm:w-auto">
+      {% for value, label in options %}
+      <option value="{{ value }}"{% if value == selected %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <noscript><button type="submit" class="btn-ghost btn-sm">Go</button></noscript>
+  </form>
+  {%- if next_url %}
+  <a href="{{ next_url }}" class="month-arrow" aria-label="Next month">{{ icon("chevron-right") }}</a>
+  {%- else %}
+  <span class="month-arrow" role="link" aria-disabled="true" aria-label="Next month">{{ icon("chevron-right") }}</span>
+  {%- endif %}
+</div>
+{%- endmacro %}

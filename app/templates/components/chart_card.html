@@ -1,0 +1,38 @@
+{#- Analytics chart building blocks. Import with:
+    {% from "components/chart_card.html" import chart_card, chart_canvas, data_table %}
+
+    chart_card(heading, id): white card with an <h2>; the body comes from {% call %}.
+    chart_canvas(id, aria_label, box): the canvas in its own relatively positioned wrapper
+      (Chart.js sizes the chart from that wrapper, so never style the canvas itself).
+    data_table(caption, headers): "Show data" <details> with a table; the caller renders the <tr> rows.
+      This is the screen-reader and no-JS fallback for the chart. -#}
+
+{% macro chart_card(heading, id, extra="") -%}
+<section class="card chart-card {{ extra }}" aria-labelledby="{{ id }}-heading">
+  <h2 id="{{ id }}-heading" class="font-semibold">{{ heading }}</h2>
+  {{ caller() }}
+</section>
+{%- endmacro %}
+
+{% macro chart_canvas(id, aria_label, box="chart-box mt-4") -%}
+<div class="{{ box }}">
+  <canvas id="{{ id }}" role="img" aria-label="{{ aria_label }}"></canvas>
+</div>
+{%- endmacro %}
+
+{% macro data_table(caption, headers) -%}
+<details class="mt-auto pt-4">
+  <summary class="cursor-pointer text-sm font-semibold text-ink-soft">Show data</summary>
+  <div class="mt-2 max-h-72 overflow-y-auto">
+    <table class="data-table">
+      <caption class="sr-only">{{ caption }}</caption>
+      <thead>
+        <tr>{% for header in headers %}<th scope="col"{% if not loop.first %} class="text-right"{% endif %}>{{ header }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+        {{ caller() }}
+      </tbody>
+    </table>
+  </div>
+</details>
+{%- endmacro %}

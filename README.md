@@ -15,15 +15,15 @@ app/
   supabase_client.py   get_supabase() (anon, for Auth) and get_user_supabase(token) (acts as the logged-in user, so RLS applies); both per request on flask.g
   auth_utils.py        login_required, logged_out_only, current user, token refresh, safe_next
   forms.py             Flask-WTF forms (auth, ExpenseForm, CategoryForm)
-  services/            auth_service.py (Supabase Auth only), expenses.py, categories.py, storage.py (icon upload/resize), db.py (shared errors/client)
+  services/            auth_service.py (Supabase Auth only), expenses.py, categories.py, analytics.py, storage.py (icon upload/resize), db.py (shared errors/client)
   utils/dates.py       Asia/Karachi "today", month/day helpers, Jinja filters (money, dates)
-  routes/              main.py (landing), auth.py, expenses.py (/dashboard, /expenses/*), categories.py (/categories/*), placeholders.py (/analytics)
+  routes/              main.py (landing), auth.py, expenses.py (/dashboard, /expenses/*), categories.py (/categories/*), analytics.py (/analytics)
   styles/input.css     Tailwind source: theme tokens (@theme) + component classes
-  templates/           base.html, landing.html, dashboard.html, coming_soon.html, 404.html,
+  templates/           base.html, landing.html, dashboard.html, analytics.html, 404.html,
                        auth/, expenses/ (detail, edit), categories/, components/
 public/static/         served at /static/* (Vercel CDN in production, Flask locally)
   css/output.css       compiled Tailwind CSS (committed)
-  js/                  password-toggle, dialogs, dashboard, expense-form, category-form (small vanilla scripts)
+  js/                  password-toggle, dialogs, dashboard, expense-form, category-form, analytics (small vanilla scripts)
   img/favicon.svg
 supabase/migrations/   SQL migrations (applied to the Supabase project)
 wsgi.py                entry point for Vercel and `flask run`
@@ -129,13 +129,37 @@ Every database and storage change is a SQL file in `supabase/migrations/`, commi
 |---|---|
 | `20261122_01_categories_expenses.sql` | `categories` and `expenses` tables, checks and indexes, Row Level Security (each user only sees their own rows), the shared `set_updated_at()` trigger, the 7 default categories (trigger on `auth.users` for new sign-ups, backfill for existing users), and the functions `dashboard_totals`, `category_expense_counts` and `delete_category` |
 | `20261122_02_category_icons_storage.sql` | the public `category-icons` Storage bucket and its policies |
+| `20261122_03_analytics_function.sql` | `get_month_analytics(p_month_start, p_today)` for the analytics page (Spec 04) |
 
 Notes:
 - The app only uses the **anon key** plus the logged-in user's access token (sent per request by `get_user_supabase()`), so RLS applies as that user. The `service_role` key is never used.
 - `categories.is_fallback` marks each user's undeletable "Other" category (it can be renamed). Deleting a category moves its expenses there, atomically, in the `delete_category` function.
 - **Storage bucket `category-icons`:** public read (icon URLs need no signing), but a user can only write inside their own folder `{user_id}/`. Objects are `{user_id}/{random}.webp`, resized by the app to 128×128 WEBP (Pillow). The bucket accepts only `image/webp` up to 512 KB.
 - Money is stored as `numeric(12,2)` and handled as `Decimal` in Python. A month's list is fetched in one request (PostgREST returns at most 1000 rows, far more than a month of personal expenses); there is no pagination yet.
+- `get_month_analytics(p_month_start date, p_today date) returns jsonb` returns everything `/analytics` needs in one call: totals, daily series (zeros included, with running totals), categories, the previous month and the last 6 months. It is `security invoker` (RLS applies), callable only by `authenticated`, and returns **money as text** so Python reads exact `Decimal`s. Flask passes `p_today` (Karachi time), and a month outside the user's range falls back to the current month.
 - All "today" and "current month" logic uses Asia/Karachi time (`app/utils/dates.py`, with the `tzdata` package), because Vercel runs in UTC.
+
+---
+
+## Chart.js (analytics page only)
+
+`/analytics` loads **Chart.js 4.6.1** from cdnjs, pinned with Subresource Integrity, and only on that page (`app/templates/analytics.html`):
+
+```html
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.6.1/chart.umd.min.js"
+        integrity="sha512-vMRyUfXe50uUhhDC+fk6UYBA/1VPj+I7Jn+wK0A3+wSVeUgT9OCz/xoF2M8KFvrmUOlb4Anv0FQUw8NafuzYPw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+```
+
+Flask renders the stats, legend and "Show data" tables, and puts the chart data in `<script type="application/json" id="analytics-data">`. `public/static/js/analytics.js` draws the charts from it. If the CDN is blocked, the page still works without the charts.
+
+**To upgrade:** pick a version, get the `chart.umd.min.js` hash from `https://api.cdnjs.com/libraries/Chart.js/<version>?fields=sri` (not the top-level `sri` field, which is for `chart.min.js`), update both attributes, then check the hash locally:
+
+```powershell
+$f = Join-Path $env:TEMP "chart.js"
+curl.exe -sSfL "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/<version>/chart.umd.min.js" -o $f
+"sha512-" + [Convert]::ToBase64String([Security.Cryptography.SHA512]::Create().ComputeHash([IO.File]::ReadAllBytes($f)))
+```
 
 ---
 

@@ -1,20 +1,19 @@
 {#- Dashboard top bar: month, day, Analytics, "Spent this month" tab and profile menu. Included by dashboard.html (needs `view`). -#}
 {% from "components/macros.html" import accent, button, icon %}
+{% from "components/month_picker.html" import month_picker %}
 <div class="flex flex-wrap items-center gap-2 sm:gap-3">
   <h1 class="mr-auto text-3xl font-extrabold tracking-tight sm:text-5xl">Your {{ accent("month.") }}</h1>
   <div class="ml-auto sm:hidden">{% include "components/profile_menu.html" %}</div>
 </div>
 
 <div class="mt-5 flex flex-wrap items-center gap-2 sm:gap-3">
-  <form method="get" action="{{ url_for('expenses.dashboard') }}" data-autosubmit class="min-w-0">
-    <label for="month" class="sr-only">Month</label>
-    <select id="month" name="month" class="select-pill">
-      {% for value, label in view.month_options %}
-      <option value="{{ value }}"{% if value == view.month_value %} selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-    <noscript><button type="submit" class="btn-ghost btn-sm">Go</button></noscript>
-  </form>
+  {{ month_picker(
+    url_for('expenses.dashboard'),
+    view.month_options,
+    view.month_value,
+    url_for('expenses.dashboard', month=view.prev_month|month_value) if view.prev_month else None,
+    url_for('expenses.dashboard', month=view.next_month|month_value) if view.next_month else None,
+  ) }}
 
   <form method="get" action="{{ url_for('expenses.dashboard') }}" data-autosubmit class="flex min-w-0 items-center gap-2">
     {% if not view.is_current_month %}<input type="hidden" name="month" value="{{ view.month_value }}">{% endif %}
@@ -28,7 +27,7 @@
     {% endif %}
   </form>
 
-  <a href="{{ url_for('placeholders.analytics') }}" class="btn-ghost btn-sm">{{ icon("chart", "h-4 w-4") }}Analytics</a>
+  <a href="{{ url_for('analytics.index', month=view.month_value) }}" class="btn-ghost btn-sm">{{ icon("chart", "h-4 w-4") }}Analytics</a>
 
   <div class="card-dark spent-tab order-last w-full sm:order-none sm:ml-auto sm:w-auto">
     <p class="text-xs text-cream/70">Spent in {{ view.today|month_name }}</p>

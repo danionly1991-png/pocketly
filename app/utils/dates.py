@@ -10,7 +10,7 @@ from __future__ import annotations
 import calendar
 import re
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from zoneinfo import ZoneInfo
 
 from flask import Flask
@@ -40,6 +40,13 @@ def month_end(first: date) -> date:
 def shift_month(first: date, months: int) -> date:
     index = first.year * 12 + (first.month - 1) + months
     return date(index // 12, index % 12 + 1, 1)
+
+
+def adjacent_months(month: date, first_month: date, current_month: date) -> tuple[date | None, date | None]:
+    """(previous, next) month for the ‹ › arrows, or None where the arrow is disabled."""
+    prev = shift_month(month, -1) if month > month_start(first_month) else None
+    nxt = shift_month(month, 1) if month < current_month else None
+    return prev, nxt
 
 
 # --- Query-string / form parsing --------------------------------------------
@@ -85,6 +92,11 @@ def month_options(first_month: date, current_month: date) -> list[tuple[str, str
     return options
 
 
+def month_from_value(value: str) -> date:
+    """"2026-11" -> date(2026, 11, 1). The value must already be valid (e.g. from the database)."""
+    return date(int(value[:4]), int(value[5:7]), 1)
+
+
 def to_decimal(value) -> Decimal:
     if value is None:
         return Decimal("0")
@@ -100,6 +112,11 @@ def money(value) -> str:
     if amount == amount.to_integral_value():
         return f"Rs {int(amount):,}"
     return f"Rs {amount:,.2f}"
+
+
+def whole_money(value) -> str:
+    """Rs 293 for 293.18: rounded half-up to whole rupees (the analytics daily average)."""
+    return money(to_decimal(value).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
 def amount_input(value) -> str:
@@ -126,6 +143,22 @@ def month_name(d: date) -> str:
     return f"{d:%B}"
 
 
+def month_short(d: date) -> str:
+    return f"{d:%b}"
+
+
+def month_value(d: date) -> str:
+    """The `?month=` value, e.g. "2026-11"."""
+    return f"{d:%Y-%m}"
+
+
+def day_range_label(start: date, end: date) -> str:
+    """"1–22 Oct", or "1 Oct" for a single day (same month)."""
+    if start == end:
+        return day_month(start)
+    return f"{start.day}–{end.day} {end:%b}"
+
+
 def day_month(d: date) -> str:
     return f"{d.day} {d:%b}"
 
@@ -141,5 +174,18 @@ def iso_day_name(value: str | None) -> str:
 
 
 def register_filters(app: Flask) -> None:
-    for fn in (money, amount_input, short_date, long_date, month_label, month_name, day_month, day_name, iso_day_name):
+    for fn in (
+        money,
+        whole_money,
+        amount_input,
+        short_date,
+        long_date,
+        month_label,
+        month_name,
+        month_short,
+        month_value,
+        day_month,
+        day_name,
+        iso_day_name,
+    ):
         app.add_template_filter(fn, fn.__name__)

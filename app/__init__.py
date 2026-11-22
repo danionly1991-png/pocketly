@@ -19,13 +19,13 @@ def create_app(config_class: type = Config) -> Flask:
     CSRFProtect(app)
     register_filters(app)
 
-    from app.routes import auth_bp, categories_bp, expenses_bp, main_bp, placeholders_bp
+    from app.routes import analytics_bp, auth_bp, categories_bp, expenses_bp, main_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(expenses_bp)
     app.register_blueprint(categories_bp)
-    app.register_blueprint(placeholders_bp)
+    app.register_blueprint(analytics_bp)
 
     @app.errorhandler(404)
     def not_found(_error):
@@ -64,7 +64,7 @@ def create_app(config_class: type = Config) -> Flask:
             "current_user": user,
             "get_started_url": url_for("expenses.dashboard" if user else "auth.signup"),
             # Signed-in app pages show only the logo in the navbar (the dashboard has its own top bar).
-            "app_shell": request.blueprint in {"expenses", "categories", "placeholders"},
+            "app_shell": request.blueprint in {"expenses", "categories", "analytics"},
         }
 
     if not (app.config.get("SUPABASE_URL") and app.config.get("SUPABASE_ANON_KEY")):

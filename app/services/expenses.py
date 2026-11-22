@@ -15,6 +15,7 @@ from postgrest.exceptions import APIError
 from app.services.categories import Category, to_category
 from app.services.db import CAUGHT, CATEGORY_MESSAGE, DataError, friendly, user_client
 from app.utils.dates import (
+    adjacent_months,
     karachi_today,
     month_end,
     month_options,
@@ -48,6 +49,7 @@ class Totals:
 class DashboardView:
     today: date
     current_month: date
+    first_month: date  # earliest month the Month selector offers
     month: date
     day: date | None
     is_current_month: bool
@@ -61,6 +63,16 @@ class DashboardView:
     def month_value(self) -> str:
         """The `?month=` value for this view, e.g. "2026-11"."""
         return f"{self.month:%Y-%m}"
+
+    @property
+    def prev_month(self) -> date | None:
+        """Target of the ‹ arrow, or None at the first available month."""
+        return adjacent_months(self.month, self.first_month, self.current_month)[0]
+
+    @property
+    def next_month(self) -> date | None:
+        """Target of the › arrow, or None on the current month."""
+        return adjacent_months(self.month, self.first_month, self.current_month)[1]
 
     @property
     def day_value(self) -> str:
@@ -189,14 +201,16 @@ def build_dashboard(month_param: str | None, day_param: str | None) -> Dashboard
     view_from, view_to = (day, day) if day else (month, month_end(month))
     expenses = list_expenses(view_from, view_to)
     totals = dashboard_totals(today, view_from, view_to)
+    first_month = min(month_start(totals.first_month), month)
 
     return DashboardView(
         today=today,
         current_month=current,
+        first_month=first_month,
         month=month,
         day=day,
         is_current_month=is_current,
-        month_options=month_options(min(totals.first_month, month), current),
+        month_options=month_options(first_month, current),
         expenses=expenses,
         totals=totals,
         date_min=month,
@@ -215,6 +229,7 @@ def empty_view(month_param: str | None, day_param: str | None) -> DashboardView:
     return DashboardView(
         today=today,
         current_month=current,
+        first_month=month,
         month=month,
         day=day,
         is_current_month=is_current,

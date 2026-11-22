@@ -17,11 +17,11 @@ app/
 ├── supabase_client.py   # get_supabase() (anon, for Auth) + get_user_supabase(token) (acts as the user, RLS applies); per request on flask.g, None if unconfigured
 ├── auth_utils.py        # login_required, logged_out_only, current_user, token refresh, safe_next
 ├── forms.py             # Flask-WTF forms (auth, ExpenseForm, CategoryForm)
-├── services/            # auth_service.py (the only module that talks to Supabase Auth); expenses.py, categories.py, storage.py (Pillow icons), db.py (DataError + user client)
+├── services/            # auth_service.py (the only module that talks to Supabase Auth); expenses.py, categories.py, analytics.py, storage.py (Pillow icons), db.py (DataError + user client)
 ├── utils/dates.py       # Asia/Karachi "today", month/day parsing, Jinja filters (money, dates)
-├── routes/              # one blueprint per feature (main, auth, expenses, categories, placeholders)
+├── routes/              # one blueprint per feature (main, auth, expenses, categories, analytics)
 ├── styles/input.css     # Tailwind source: @theme tokens + @layer components
-└── templates/           # base.html, components/, auth/, expenses/, categories/, landing, dashboard, coming_soon, 404
+└── templates/           # base.html, components/, auth/, expenses/, categories/, landing, dashboard, analytics, 404
 public/static/           # css/output.css (compiled, COMMITTED), js/, img/
 supabase/migrations/     # SQL migrations (committed AND applied to the Supabase project)
 specs/                   # numbered feature specs
@@ -32,7 +32,7 @@ wsgi.py                  # entry point for flask run and Vercel
 - **Static files are in `public/static/`**, so `/static/...` works locally and on Vercel's CDN.
 - **Tailwind v4 is CSS-first.** Tokens are in the `@theme` block of `input.css`. Shared classes are in `@layer components`: `btn-primary`, `btn-dark`, `btn-ghost`, `card`, `card-dark`, `container-page`, `underline-swoosh`, plus the form classes `auth-card`, `form-label`, `form-input`, `form-error`, `flash-success`, `flash-error`, `link-ember`.
 - **Theme:** about 70% `cream`, 30% `ink`, with `ember` (#D9541E) as an accent only. Fonts are Inter, plus Instrument Serif italic for 1–3 accent words in headlines.
-- **Placeholders:** `routes/placeholders.py` serves only `/analytics` (login required, "← Back to dashboard"). Remove it from `PAGES` once its spec builds the real page.
+- **Analytics (Spec 04):** `/analytics?month=YYYY-MM` (`routes/analytics.py`, login required). `services/analytics.py` makes one call to the `get_month_analytics()` RPC (security invoker; money comes back as text, so it becomes `Decimal`) and builds the view. Jinja renders the stats, legend and `<details>` data tables. `chart_payload()` goes into `<script type="application/json" id="analytics-data">`, and `public/static/js/analytics.js` draws the 4 Chart.js charts (4.6.1 from cdnjs with SRI, loaded on this page only). The month dropdown with ‹ › arrows is `components/month_picker.html`, shared with the dashboard. Every sum is done in SQL; Python only divides and formats.
 - **Auth (Spec 02):** Supabase email + password, run server side. The login lives only in Flask's signed cookie (`session["auth"]`); `before_request` loads `g.current_user` and refreshes tokens when they're about to expire. Protect routes with `@login_required` from `app/auth_utils.py`. `get_supabase()` builds a fresh client per request (never share one between requests). Email links land on `/auth/confirm`. Supabase's default templates (we can't edit them without custom SMTP) put tokens in the URL fragment, so a small script on the "Verifying..." page POSTs them to `/auth/session`, which validates them with Supabase. The `token_hash` + `verify_otp` path still works if templates are customised later (see README).
 - **Data (Spec 03):** tables `categories` and `expenses`, both with RLS (`auth.uid() = user_id`), plus the public Storage bucket `category-icons` (writes only inside `{user_id}/`). Data code calls `services/db.user_client()`, which sends the user's access token, so RLS applies as that user. `categories.is_fallback` marks each user's undeletable "Other" (renamable); `delete_category()` (RPC) moves expenses to it and deletes atomically. Totals come from the `dashboard_totals()` RPC (a database `sum()`). Users can create any number of categories. All "today" logic uses `karachi_today()`, never `date.today()`. Migrations in `supabase/migrations/` are applied by Claude Code through its Supabase access.
 - **Config:** env vars are `SECRET_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SITE_URL`. A missing value logs a warning and doesn't crash the app.
@@ -89,7 +89,7 @@ There's no test suite or linter yet. Verify by running the app against the spec'
 | 01 | Base & landing page |  Done |
 | 02 | Sign up, email verification & login |  Done |
 | 03 | Dashboard, expenses & categories |  Done |
-| 04 | Analytics |  Next |
+| 04 | Analytics |  Done |
 
 **Spec 01 delivered:** the Flask app factory and blueprints; the Tailwind design system; `base.html` with navbar and footer; the landing page (hero, features strip, CTA); coming-soon placeholders; a styled 404; the Supabase client helper; and Vercel deployment.
 
@@ -97,7 +97,9 @@ There's no test suite or linter yet. Verify by running the app against the spec'
 
 **Spec 03 delivered:** the Supabase tables, RLS, default-category seeding and icon bucket (migrations); the dashboard (month selector, day picker, "Spent this month" tab, profile menu, numbered expense list, floating "+" add panel); expense detail, edit and delete; category management with emoji or uploaded-photo icons (Pillow, 128×128 WEBP); Karachi-time and money formatting helpers.
 
-The order of specs 04+ isn't final. When a spec is finished, update this table and the Architecture section.
+**Spec 04 delivered:** the `get_month_analytics` RPC (migration 03); `/analytics` with a shared ‹ month › picker (also on the dashboard), 4 stat cards, a category donut with HTML legend ("Everything else" after 6 slices), daily bars that open the dashboard day, this-vs-last-month cumulative lines, and a last-6-months chart; empty/first-month states, aria summaries, "Show data" tables and a no-JS fallback; a responsive layout from 375px up.
+
+The order of specs 05+ isn't final. When a spec is finished, update this table and the Architecture section.
 
 ## 7. Warnings / things to avoid
 

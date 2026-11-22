@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import accent, button, icon %}
+{% from "components/flash.html" import flash_messages %}
+{% from "components/month_picker.html" import month_picker %}
+{% from "components/stat_card.html" import stat_card %}
+{% from "components/chart_card.html" import chart_card, chart_canvas, data_table %}
+{% from "components/category_icon.html" import category_icon %}
+
+{% block title %}Analytics · Pocketly{% endblock %}
+
+
+{% block content %}
+{#- Last 6 months: shown with the charts, and on its own in the empty state. -#}
+{% macro six_month_card(view) -%}
+{% call chart_card("Last 6 months", "chart-six") %}
+  {{ chart_canvas("chart-six", view.aria.six) }}
+  {% if view.six_months|length == 1 %}<p class="chart-note">More months will appear here as you keep tracking.</p>{% endif %}
+  {% call data_table("Monthly totals", ["Month", "Total"]) %}
+    {% for point in view.six_months %}
+    <tr>
+      <td><a href="{{ url_for('analytics.index', month=point.month|month_value) }}" class="{{ 'font-semibold text-ink' if point.selected else 'link-ember' }}">{{ point.month|month_label }}</a></td>
+      <td class="text-right">{{ point.total|money }}</td>
+    </tr>
+    {% endfor %}
+  {% endcall %}
+{% endcall %}
+{%- endmacro %}
+
+<section class="container-page pb-12 pt-2 sm:pt-4">
+  <div class="mb-4 max-w-xl">{{ flash_messages() }}</div>
+
+  {#- Phone: (1) ← Dashboard + profile, (2) heading, (3) full-width month picker. Desktop: one row. -#}
+  <header class="flex flex-wrap items-center gap-x-3 gap-y-3">
+    <a href="{{ url_for('expenses.dashboard', month=view.month_value) }}" class="btn-ghost btn-sm order-1 -ml-3 sm:-ml-4">{{ icon("arrow-left", "h-4 w-4") }}Dashboard</a>
+    <div class="order-2 ml-auto lg:order-4 lg:ml-0">{% include "components/profile_menu.html" %}</div>
+    <h1 class="order-3 w-full text-3xl font-extrabold tracking-tight sm:text-4xl lg:order-2 lg:mr-auto lg:w-auto lg:text-5xl">Your {{ accent("spending.") }}</h1>
+    {{ month_picker(
+      url_for('analytics.index'),
+      view.month_options,
+      view.month_value,
+      url_for('analytics.index', month=view.prev_month|month_value) if view.prev_month else None,
+      url_for('analytics.index', month=view.next_month|month_value) if view.next_month else None,
+      extra="order-4 lg:order-3",
+    ) }}
+  </header>
+
+  {% if view.has_expenses %}
+  <noscript><p class="chart-note mt-6">Turn on JavaScript to see the charts.</p></noscript>
+  <p class="chart-note mt-6" data-chart-error hidden>Charts couldn't load. The numbers below are still correct.</p>
+
+  {#- Stats: 2 × 2 on phones and small tablets, 4 in a row from 768px. -#}
+  {% set total_text = view.total|money %}
+  {% set average_text = view.daily_average|whole_money %}
+  {% set biggest_text = view.biggest.amount|money %}
+  <div class="mt-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 lg:gap-6">
+    {{ stat_card("Total spent", total_text, view.count ~ (" expense" if view.count == 1 else " expenses"), stat_size(total_text), dark=True) }}
+    {{ stat_card("Daily average", average_text, "over " ~ view.days_elapsed ~ (" day" if view.days_elapsed == 1 else " days"), stat_size(average_text)) }}
+    {% call stat_card("Biggest expense", biggest_text, view.biggest.category_name ~ " · " ~ view.biggest.spent_on|short_date, stat_size(biggest_text), href=url_for('expenses.detail', expense_id=view.biggest.id)) %}{{ category_icon(view.biggest.icon, "sm") }}{% endcall %}
+    {{ stat_card("vs last month", view.comparison.value, view.comparison.text, stat_size(view.comparison.value), value_class="text-ember-dark" if view.comparison.direction == "up" else "text-ink") }}
+  </div>
+
+  {#- Charts: stacked below 1024px, 2 × 2 from 1024px (grid stretch keeps each row's cards the same height). -#}
+  <div class="mt-4 grid grid-cols-1 gap-4 sm:mt-6 lg:grid-cols-2 lg:gap-6">
+    {% call chart_card("Where my money went", "chart-donut") %}
+      <div class="mt-4 flex flex-col items-center gap-5 sm:flex-row sm:items-start">
+        <div class="relative shrink-0">
+          {{ chart_canvas("chart-donut", view.aria.donut, box="donut-box") }}
+          <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+            <span class="text-lg font-extrabold tracking-tight tabular-nums">{{ total_text }}</span>
+            <span class="text-xs text-ink-soft">total</span>
+          </div>
+        </div>
+        <ul class="w-full min-w-0 sm:flex-1" aria-label="Spending by category">
+          {% for category in view.categories %}
+          <li class="legend-row">
+            <span class="legend-dot" data-legend-index="{{ loop.index0 }}" aria-hidden="true"></span>
+            {{ category_icon(category.icon, "sm") }}
+            <span class="truncate font-medium">{{ category.name }}</span>
+            <span class="text-right font-semibold tabular-nums">{{ category.total|money }}</span>
+            <span class="text-right text-ink-soft tabular-nums">{{ category.pct_label }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% call data_table("Spending by category", ["Category", "Amount", "Share"]) %}
+        {% for category in view.categories %}
+        <tr><td class="break-words">{{ category.name }}</td><td class="text-right">{{ category.total|money }}</td><td class="text-right">{{ category.pct_label }}</td></tr>
+        {% endfor %}
+      {% endcall %}
+    {% endcall %}
+
+    {% call chart_card("Daily spending", "chart-daily") %}
+      {{ chart_canvas("chart-daily", view.aria.daily) }}
+      {% if view.biggest_day %}<p class="chart-note">Biggest day: {{ view.biggest_day.day|short_date }} — {{ view.biggest_day.total|money }}</p>{% endif %}
+      {% call data_table("Spending per day", ["Day", "Amount"]) %}
+        {% for point in view.daily %}
+        <tr>
+          <td><a href="{{ url_for('expenses.dashboard', month=view.month_value, day=point.day.isoformat()) }}" class="link-ember">{{ point.day|short_date }}</a></td>
+          <td class="text-right">{{ point.total|money }}</td>
+        </tr>
+        {% endfor %}
+      {% endcall %}
+    {% endcall %}
+
+    {% call chart_card("This month vs last month", "chart-cumulative") %}
+      <ul class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm" aria-label="Chart legend">
+        <li class="flex items-center gap-2"><span class="w-5 border-t-[3px] border-ember" aria-hidden="true"></span>{{ view.month|month_name }}</li>
+        {% if view.prev_has_data %}
+        <li class="flex items-center gap-2"><span class="w-5 border-t-2 border-dashed border-ink-soft" aria-hidden="true"></span>{{ view.prev_start|month_name }}</li>
+        {% endif %}
+      </ul>
+      {{ chart_canvas("chart-cumulative", view.aria.cumulative, box="chart-box mt-2") }}
+      {% if not view.prev_has_data %}<p class="chart-note">No data for {{ view.prev_start|month_name }} to compare.</p>{% endif %}
+      {% call data_table("Running total by day of the month", ["Day", (view.month|month_short) ~ " so far", (view.prev_start|month_short) ~ " so far"]) %}
+        {% for day, current, previous in view.cumulative_rows %}
+        <tr>
+          <td>Day {{ day }}</td>
+          <td class="text-right">{{ current|money if current is not none else "" }}</td>
+          <td class="text-right">{{ previous|money if previous is not none else "" }}</td>
+        </tr>
+        {% endfor %}
+      {% endcall %}
+    {% endcall %}
+
+    {{ six_month_card(view) }}
+  </div>
+
+  {% else %}
+  <div class="card mt-6 text-center">
+    <p class="text-ink-soft">
+      {% if view.load_failed %}We couldn't load your numbers.{% else %}No expenses in {{ view.month|month_label }}.{% endif %}
+    </p>
+    {{ button("Go to dashboard", url_for('expenses.dashboard', month=view.month_value), "dark", extra="mt-4") }}
+  </div>
+  {% if view.show_six_months %}
+  <noscript><p class="chart-note mt-6">Turn on JavaScript to see the charts.</p></noscript>
+  <p class="chart-note mt-6" data-chart-error hidden>Charts couldn't load. The numbers below are still correct.</p>
+  <div class="mt-6 lg:max-w-[calc(50%-0.75rem)]">{{ six_month_card(view) }}</div>
+  {% endif %}
+  {% endif %}
+
+  <script type="application/json" id="analytics-data">{{ chart_data|tojson }}</script>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% if view.has_expenses or view.show_six_months %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.6.1/chart.umd.min.js" integrity="sha512-vMRyUfXe50uUhhDC+fk6UYBA/1VPj+I7Jn+wK0A3+wSVeUgT9OCz/xoF2M8KFvrmUOlb4Anv0FQUw8NafuzYPw==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+<script src="{{ url_for('static', filename='js/analytics.js') }}" defer></script>
+{% endif %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
+{% endblock %}

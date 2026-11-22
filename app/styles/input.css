@@ -173,6 +173,65 @@
     @apply rounded-xl bg-cream p-4 whitespace-pre-line break-words;
   }
 
+  /* Shared ‹ month › picker (Spec 04): arrows are 44×44 tap targets */
+  .month-picker {
+    @apply flex w-full min-w-0 items-center gap-1 sm:w-auto;
+  }
+
+  .month-arrow {
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition-colors hover:bg-cream-dark;
+  }
+
+  .month-arrow[aria-disabled="true"] {
+    @apply cursor-not-allowed text-ink-soft/30 hover:bg-transparent;
+  }
+
+  /* Analytics (Spec 04). Stat values scale with their card's width (cqw), so they never overflow. */
+  .stat-value {
+    @apply mt-2 whitespace-nowrap font-extrabold leading-tight tracking-tight tabular-nums;
+  }
+
+  .stat-value-lg {
+    @apply text-[min(1.875rem,20cqw)];
+  }
+
+  .stat-value-md {
+    @apply text-[min(1.5rem,16cqw)];
+  }
+
+  .stat-value-sm {
+    @apply text-[min(1.25rem,13.5cqw)];
+  }
+
+  .chart-card {
+    @apply flex min-w-0 flex-col;
+  }
+
+  /* Chart.js needs a relatively positioned container dedicated to one canvas; height comes from here. */
+  .chart-box {
+    @apply relative h-56 w-full min-w-0 sm:h-60 lg:h-[280px];
+  }
+
+  .donut-box {
+    @apply relative h-[180px] w-[180px] shrink-0 lg:h-[200px] lg:w-[200px];
+  }
+
+  .legend-row {
+    @apply grid grid-cols-[0.625rem_1.5rem_minmax(0,1fr)_auto_2.75rem] items-center gap-x-2 py-1.5 text-sm;
+  }
+
+  .legend-dot {
+    @apply h-2.5 w-2.5 rounded-full bg-cream-dark;
+  }
+
+  .data-table {
+    @apply w-full text-left text-sm tabular-nums [&_td]:py-1 [&_td]:pr-3 [&_th]:py-1 [&_th]:pr-3 [&_th]:font-semibold [&_th]:text-ink-soft;
+  }
+
+  .chart-note {
+    @apply mt-3 text-sm text-ink-soft;
+  }
+
   /* Add-expense panel: bottom sheet on phones, anchored bottom-right from sm up */
   .dialog-panel {
     @apply mx-0 mt-auto mb-0 max-h-[90vh] w-full max-w-full overflow-y-auto rounded-t-3xl bg-white p-0 text-ink shadow-soft backdrop:bg-ink/50 sm:mr-6 sm:mb-6 sm:ml-auto sm:w-[480px] sm:max-w-[calc(100%-3rem)] sm:rounded-3xl;
