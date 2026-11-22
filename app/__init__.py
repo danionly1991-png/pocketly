@@ -63,8 +63,10 @@ def create_app(config_class: type = Config) -> Flask:
             "current_year": karachi_today().year,
             "current_user": user,
             "get_started_url": url_for("expenses.dashboard" if user else "auth.signup"),
-            # Signed-in app pages show only the logo in the navbar (the dashboard has its own top bar).
+            # Signed-in app pages get the app navbar (Expenses / Analytics links + profile menu).
             "app_shell": request.blueprint in {"expenses", "categories", "analytics"},
+            # Which app navbar link is underlined (aria-current="page").
+            "nav_section": request.blueprint,
         }
 
     if not (app.config.get("SUPABASE_URL") and app.config.get("SUPABASE_ANON_KEY")):

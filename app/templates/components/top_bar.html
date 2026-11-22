@@ -1,39 +1,31 @@
-{#- Dashboard top bar: month, day, Analytics, "Spent this month" tab and profile menu. Included by dashboard.html (needs `view`). -#}
-{% from "components/macros.html" import accent, button, icon %}
+{#- Dashboard header: ‹ month › picker (the visual heading), the running "Spent in {month}" total, and the day filter.
+    Included by dashboard.html (needs `view`, `month_params`). -#}
+{% from "components/macros.html" import amount, icon %}
 {% from "components/month_picker.html" import month_picker %}
-<div class="flex flex-wrap items-center gap-2 sm:gap-3">
-  <h1 class="mr-auto text-3xl font-extrabold tracking-tight sm:text-5xl">Your {{ accent("month.") }}</h1>
-  <div class="ml-auto sm:hidden">{% include "components/profile_menu.html" %}</div>
-</div>
+<h1 class="sr-only">Expenses, {{ view.month|month_label }}</h1>
 
-<div class="mt-5 flex flex-wrap items-center gap-2 sm:gap-3">
-  {{ month_picker(
-    url_for('expenses.dashboard'),
-    view.month_options,
-    view.month_value,
-    url_for('expenses.dashboard', month=view.prev_month|month_value) if view.prev_month else None,
-    url_for('expenses.dashboard', month=view.next_month|month_value) if view.next_month else None,
-  ) }}
+{{ month_picker(
+  url_for('expenses.dashboard'),
+  view.month_options,
+  view.month_value,
+  url_for('expenses.dashboard', month=view.prev_month|month_value) if view.prev_month else None,
+  url_for('expenses.dashboard', month=view.next_month|month_value) if view.next_month else None,
+) }}
 
-  <form method="get" action="{{ url_for('expenses.dashboard') }}" data-autosubmit class="flex min-w-0 items-center gap-2">
-    {% if not view.is_current_month %}<input type="hidden" name="month" value="{{ view.month_value }}">{% endif %}
-    <label for="day" class="sr-only">Day</label>
-    <input type="date" id="day" name="day" min="{{ view.date_min.isoformat() }}" max="{{ view.date_max.isoformat() }}" value="{{ view.day_value }}" class="form-input w-auto min-w-0 py-2 text-sm">
-    <noscript><button type="submit" class="btn-ghost btn-sm">Go</button></noscript>
-    {% if view.day %}
-    <a href="{{ url_for('expenses.dashboard', **month_params) }}" class="btn-ghost btn-sm">× All days</a>
-    {% else %}
-    <span class="text-sm text-ink-soft">All days</span>
-    {% endif %}
-  </form>
-
-  <a href="{{ url_for('analytics.index', month=view.month_value) }}" class="btn-ghost btn-sm">{{ icon("chart", "h-4 w-4") }}Analytics</a>
-
-  <div class="card-dark spent-tab order-last w-full sm:order-none sm:ml-auto sm:w-auto">
-    <p class="text-xs text-cream/70">Spent in {{ view.today|month_name }}</p>
-    <p class="text-2xl font-extrabold tracking-tight">{{ view.totals.month_to_date|money }}</p>
-    <p class="text-xs text-cream/70">till {{ view.today|day_month }}</p>
+<div class="mt-5 flex flex-wrap items-end justify-between gap-x-8 gap-y-6 sm:mt-6">
+  {#- Always the current month, day 1 up to today, whatever is being viewed (Spec 03 §7.2). -#}
+  <div class="min-w-0">
+    <p class="text-sm text-ink-soft">Spent in {{ view.today|month_name }}</p>
+    <p class="mt-2 text-display sm:text-hero">{{ amount(view.totals.month_to_date) }}</p>
+    <p class="mt-2 text-sm text-ink-soft">{{ view.current_month|day_range_label(view.today) }}</p>
   </div>
 
-  <div class="hidden sm:block">{% include "components/profile_menu.html" %}</div>
+  <form method="get" action="{{ url_for('expenses.dashboard') }}" data-autosubmit class="w-full min-w-0 sm:w-auto">
+    {% if not view.is_current_month %}<input type="hidden" name="month" value="{{ view.month_value }}">{% endif %}
+    <label for="day" class="form-label text-ink-soft">Pick a day</label>
+    <div class="flex items-center gap-2">
+      <input type="date" id="day" name="day" min="{{ view.date_min.isoformat() }}" max="{{ view.date_max.isoformat() }}" value="{{ view.day_value }}" class="form-input min-w-0 py-2.5 text-sm sm:w-48">
+      <noscript><button type="submit" class="btn-outline btn-sm">Go</button></noscript>
+    </div>
+  </form>
 </div>

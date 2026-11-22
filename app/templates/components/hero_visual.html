@@ -1,64 +1,49 @@
-{#- Hero right column: static sample data, pure HTML/CSS -#}
+{#- Landing hero right column: a static mockup of the real dashboard (month total, category split, today's day group).
+    Only shows things the app actually does. Numbers add up: 2,710 + 1,355 + 968 + 1,417 = 6,450; 350 + 120 + 500 = 970. -#}
+{% from "components/macros.html" import amount %}
+{% set split = [
+  ("Food", "Rs 2,710", "w-[42%]", "bg-chart-1"),
+  ("Transport", "Rs 1,355", "w-[21%]", "bg-chart-2"),
+  ("Mobile", "Rs 968", "w-[15%]", "bg-chart-3"),
+  ("Other", "Rs 1,417", "w-[22%]", "bg-cream-dark"),
+] %}
 {% set today_rows = [
-  ("Food", "Rs 350", "1:15 PM"),
-  ("Transport", "Rs 120", "9:40 AM"),
-  ("Mobile top-up", "Rs 500", "8:05 AM"),
+  ("🍔", "Food", "Chai and samosa", "Rs 350"),
+  ("🚌", "Transport", "Rickshaw to uni", "Rs 120"),
+  ("📱", "Mobile top-up", "", "Rs 500"),
 ] %}
-{% set week_bars = [
-  ("M", "h-[45%]", False),
-  ("T", "h-[70%]", False),
-  ("W", "h-[35%]", False),
-  ("T", "h-[60%]", False),
-  ("F", "h-[95%]", True),
-  ("S", "h-[50%]", False),
-  ("S", "h-[25%]", False),
-] %}
-<div class="card-dark relative overflow-hidden rounded-3xl p-5 sm:h-[480px] sm:p-8" aria-label="Example of the Pocketly app">
-  {#- subtle decorative ring -#}
-  <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full border border-white/10" aria-hidden="true"></div>
+<div class="rounded-sheet bg-ink p-4 sm:p-8" aria-label="Example of the Pocketly dashboard" role="img">
+  <div class="rounded-card bg-white p-5 text-ink sm:p-6" aria-hidden="true">
+    <p class="text-sm text-ink-soft">Spent in November</p>
+    <p class="mt-2 text-display">{{ amount(6450) }}</p>
+    <p class="mt-1 text-sm text-ink-soft">1–22 Nov</p>
 
-  {#- Month summary card -#}
-  <div class="card relative w-[92%] text-ink sm:absolute sm:left-8 sm:top-8 sm:w-[60%] lg:-rotate-2">
-    <p class="text-xs font-semibold uppercase tracking-wider text-ink-soft">November</p>
-    <p class="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Rs 6,450</p>
-    <p class="text-sm text-ink-soft">spent this month</p>
-    <div class="mt-4 h-2 w-full overflow-hidden rounded-full bg-cream-dark">
-      <div class="h-full w-[65%] rounded-full bg-ember"></div>
+    <div class="mt-5 flex h-2.5 gap-0.5 overflow-hidden rounded-full">
+      {% for name, _total, width, color in split %}<span class="{{ width }} {{ color }}"></span>{% endfor %}
     </div>
-    <p class="mt-2 text-xs font-medium text-ink-soft">65% of Rs 10,000</p>
-  </div>
-
-  {#- Today list card (overlaps the month card) -#}
-  <div class="card relative z-10 -mt-4 ml-auto w-[92%] text-ink sm:absolute sm:right-8 sm:top-[188px] sm:mt-0 sm:w-[52%] lg:rotate-1">
-    <div class="flex items-center justify-between">
-      <p class="text-sm font-semibold">Today</p>
-      <p class="text-xs text-ink-soft">Rs 970</p>
-    </div>
-    <ul class="mt-3 divide-y divide-cream-dark">
-      {% for category, amount, time in today_rows %}
-      <li class="flex items-center justify-between gap-3 py-2.5">
-        <div class="min-w-0">
-          <p class="truncate text-sm font-medium">{{ category }}</p>
-          <p class="text-xs text-ink-soft">{{ time }}</p>
-        </div>
-        <p class="shrink-0 text-sm font-semibold">{{ amount }}</p>
-      </li>
+    <ul class="mt-3 grid gap-x-6 gap-y-1.5 text-sm min-[420px]:grid-cols-2">
+      {% for name, total, _w, color in split %}
+      <li class="flex min-w-0 items-center gap-2"><span class="h-2 w-2 shrink-0 rounded-full {{ color }}"></span><span class="truncate">{{ name }}</span><span class="ml-auto whitespace-nowrap tabular-nums text-ink-soft">{{ total }}</span></li>
       {% endfor %}
     </ul>
   </div>
 
-  {#- This week mini bar chart (hidden on small phones to keep the hero compact) -#}
-  <div class="card hidden text-ink sm:absolute sm:bottom-8 sm:left-8 sm:block sm:w-[34%] lg:-rotate-1">
-    <p class="text-xs font-semibold text-ink-soft">This week</p>
-    <div class="mt-3 flex h-16 items-end gap-1.5">
-      {% for label, height, highlight in week_bars %}
-      <div class="flex h-full flex-1 flex-col items-center justify-end gap-1">
-        <div class="{{ height }} w-full rounded-sm {{ 'bg-ember' if highlight else 'bg-cream-dark' }}"></div>
-      </div>
+  <div class="mt-3 overflow-hidden rounded-card bg-white text-ink sm:mt-4" aria-hidden="true">
+    <div class="day-head">
+      <span><span class="font-semibold">Today</span> <span class="text-ink-soft">Sun, 22 Nov</span></span>
+      <span class="font-semibold tabular-nums">Rs 970</span>
+    </div>
+    <ul class="divide-y divide-cream-dark">
+      {% for emoji, name, note, total in today_rows %}
+      <li class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-3 sm:px-5">
+        <span class="icon-circle h-9 w-9 text-lg">{{ emoji }}</span>
+        <span class="min-w-0">
+          <span class="block truncate font-semibold">{{ name }}</span>
+          {% if note %}<span class="block truncate text-sm text-ink-soft">{{ note }}</span>{% endif %}
+        </span>
+        <span class="font-bold tabular-nums">{{ total }}</span>
+      </li>
       {% endfor %}
-    </div>
-    <div class="mt-1.5 flex gap-1.5 text-center text-[10px] text-ink-soft">
-      {% for label, _h, _hl in week_bars %}<span class="flex-1">{{ label }}</span>{% endfor %}
-    </div>
+    </ul>
   </div>
 </div>

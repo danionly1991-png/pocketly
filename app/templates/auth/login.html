@@ -2,10 +2,10 @@
 {% from "components/macros.html" import auth_card %}
 {% from "components/form_field.html" import field %}
 
-{% block title %}Log in · Pocketly{% endblock %}
+{% block title %}Log in – Pocketly{% endblock %}
 
 {% block content %}
-{% call auth_card("Welcome", "back.", "Log in to see how your month is going.") %}
+{% call auth_card("Log in", "See how your month is going.") %}
 <form method="post" action="{{ url_for('auth.login', next=next_url) }}" class="space-y-5" novalidate>
   {{ form.hidden_tag() }}
   {{ field(form.email, type="email", autocomplete="email") }}

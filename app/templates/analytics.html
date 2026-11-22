@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% from "components/macros.html" import accent, button, icon %}
+{% from "components/macros.html" import amount, button, icon %}
 {% from "components/flash.html" import flash_messages %}
 {% from "components/month_picker.html" import month_picker %}
 {% from "components/stat_card.html" import stat_card %}
 {% from "components/chart_card.html" import chart_card, chart_canvas, data_table %}
 {% from "components/category_icon.html" import category_icon %}
 
-{% block title %}Analytics · Pocketly{% endblock %}
+{% block title %}Analytics – Pocketly{% endblock %}
 
 
 {% block content %}
@@ -29,18 +29,15 @@
 <section class="container-page pb-12 pt-2 sm:pt-4">
   <div class="mb-4 max-w-xl">{{ flash_messages() }}</div>
 
-  {#- Phone: (1) ← Dashboard + profile, (2) heading, (3) full-width month picker. Desktop: one row. -#}
-  <header class="flex flex-wrap items-center gap-x-3 gap-y-3">
-    <a href="{{ url_for('expenses.dashboard', month=view.month_value) }}" class="btn-ghost btn-sm order-1 -ml-3 sm:-ml-4">{{ icon("arrow-left", "h-4 w-4") }}Dashboard</a>
-    <div class="order-2 ml-auto lg:order-4 lg:ml-0">{% include "components/profile_menu.html" %}</div>
-    <h1 class="order-3 w-full text-3xl font-extrabold tracking-tight sm:text-4xl lg:order-2 lg:mr-auto lg:w-auto lg:text-5xl">Your {{ accent("spending.") }}</h1>
+  {#- The ‹ month › picker is the visual heading; the navbar shows which page this is. -#}
+  <header>
+    <h1 class="sr-only">Analytics, {{ view.month|month_label }}</h1>
     {{ month_picker(
       url_for('analytics.index'),
       view.month_options,
       view.month_value,
       url_for('analytics.index', month=view.prev_month|month_value) if view.prev_month else None,
       url_for('analytics.index', month=view.next_month|month_value) if view.next_month else None,
-      extra="order-4 lg:order-3",
     ) }}
   </header>
 
@@ -52,10 +49,10 @@
   {% set total_text = view.total|money %}
   {% set average_text = view.daily_average|whole_money %}
   {% set biggest_text = view.biggest.amount|money %}
-  <div class="mt-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 lg:gap-6">
-    {{ stat_card("Total spent", total_text, view.count ~ (" expense" if view.count == 1 else " expenses"), stat_size(total_text), dark=True) }}
-    {{ stat_card("Daily average", average_text, "over " ~ view.days_elapsed ~ (" day" if view.days_elapsed == 1 else " days"), stat_size(average_text)) }}
-    {% call stat_card("Biggest expense", biggest_text, view.biggest.category_name ~ " · " ~ view.biggest.spent_on|short_date, stat_size(biggest_text), href=url_for('expenses.detail', expense_id=view.biggest.id)) %}{{ category_icon(view.biggest.icon, "sm") }}{% endcall %}
+  <div class="mt-5 grid grid-cols-2 gap-3 sm:mt-6 sm:gap-4 md:grid-cols-4 lg:gap-6">
+    {{ stat_card("Total spent", amount(view.total), view.count ~ (" expense" if view.count == 1 else " expenses"), stat_size(total_text)) }}
+    {{ stat_card("Daily average", amount(view.daily_average, whole=True), "over " ~ view.days_elapsed ~ (" day" if view.days_elapsed == 1 else " days"), stat_size(average_text)) }}
+    {% call stat_card("Biggest expense", amount(view.biggest.amount), view.biggest.category_name ~ " on " ~ view.biggest.spent_on|short_date, stat_size(biggest_text), href=url_for('expenses.detail', expense_id=view.biggest.id)) %}{{ category_icon(view.biggest.icon, "sm") }}{% endcall %}
     {{ stat_card("vs last month", view.comparison.value, view.comparison.text, stat_size(view.comparison.value), value_class="text-ember-dark" if view.comparison.direction == "up" else "text-ink") }}
   </div>
 
@@ -91,7 +88,7 @@
 
     {% call chart_card("Daily spending", "chart-daily") %}
       {{ chart_canvas("chart-daily", view.aria.daily) }}
-      {% if view.biggest_day %}<p class="chart-note">Biggest day: {{ view.biggest_day.day|short_date }} — {{ view.biggest_day.total|money }}</p>{% endif %}
+      {% if view.biggest_day %}<p class="chart-note">Biggest day was {{ view.biggest_day.day|short_date }}, with {{ view.biggest_day.total|money }} spent.</p>{% endif %}
       {% call data_table("Spending per day", ["Day", "Amount"]) %}
         {% for point in view.daily %}
         <tr>
@@ -126,11 +123,11 @@
   </div>
 
   {% else %}
-  <div class="card mt-6 text-center">
+  <div class="card mt-6 flex flex-col items-center gap-4 py-10 text-center">
     <p class="text-ink-soft">
       {% if view.load_failed %}We couldn't load your numbers.{% else %}No expenses in {{ view.month|month_label }}.{% endif %}
     </p>
-    {{ button("Go to dashboard", url_for('expenses.dashboard', month=view.month_value), "dark", extra="mt-4") }}
+    {{ button("Go to expenses", url_for('expenses.dashboard', month=view.month_value), "dark", extra="btn-sm") }}
   </div>
   {% if view.show_six_months %}
   <noscript><p class="chart-note mt-6">Turn on JavaScript to see the charts.</p></noscript>
@@ -148,5 +145,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.6.1/chart.umd.min.js" integrity="sha512-vMRyUfXe50uUhhDC+fk6UYBA/1VPj+I7Jn+wK0A3+wSVeUgT9OCz/xoF2M8KFvrmUOlb4Anv0FQUw8NafuzYPw==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 <script src="{{ url_for('static', filename='js/analytics.js') }}" defer></script>
 {% endif %}
-<script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
 {% endblock %}

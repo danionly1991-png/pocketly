@@ -4,39 +4,55 @@
 {% from "components/expense_row.html" import expense_row %}
 {% from "components/expense_form.html" import expense_form %}
 
-{% block title %}Dashboard · Pocketly{% endblock %}
+{% block title %}Expenses – Pocketly{% endblock %}
 
 {% block content %}
-<section class="container-page pb-6 pt-2 sm:pt-4">
+<section class="container-page pb-28 pt-1 sm:pt-2">
   <div class="mb-4 max-w-xl">{{ flash_messages() }}</div>
 
   {% include "components/top_bar.html" %}
 
-  <div class="mt-8">
-    {% if view.day %}
-    <p class="font-semibold">Showing {{ view.day|short_date }} · {{ view.totals.view_total|money }} that day</p>
-    {% else %}
-    <h2 class="text-xl font-bold">{{ view.month|month_label }}</h2>
-    {% if not view.is_current_month %}
-    <p class="mt-1 text-ink-soft">Total for {{ view.month|month_label }}: {{ view.totals.view_total|money }}</p>
-    {% endif %}
-    {% endif %}
+  {#- What the list below shows: one day (removable chip), a past month's total, or nothing for this month. -#}
+  {% if view.day %}
+  <div class="mt-8 flex flex-wrap items-center gap-3">
+    <a href="{{ url_for('expenses.dashboard', **month_params) }}" class="chip">{{ view.day|short_date }}{{ icon("x", "h-4 w-4") }}<span class="sr-only">, show all days</span></a>
+    <p class="text-sm text-ink-soft">{{ view.totals.view_total|money }} spent that day</p>
   </div>
+  {% elif not view.is_current_month %}
+  <p class="mt-8 text-sm text-ink-soft">Total for {{ view.month|month_label }}: <span class="font-semibold text-ink">{{ view.totals.view_total|money }}</span></p>
+  {% endif %}
 
-  {% if view.expenses %}
-  <ol class="mt-4 space-y-3 pb-28">
-    {% for expense in view.expenses %}
-    {{ expense_row(expense, loop.index) }}
+  {% if view.day_groups %}
+  <div class="mt-4 space-y-4 sm:mt-6">
+    {% for group in view.day_groups %}
+    {% set heading = group.day|day_heading %}
+    {% set date_text = group.day|short_date %}
+    <section class="day-group" aria-labelledby="day-{{ group.day.isoformat() }}">
+      <h2 id="day-{{ group.day.isoformat() }}" class="day-head">
+        <span><span class="font-semibold">{{ heading }}</span>{% if heading != date_text %} <span class="text-ink-soft">{{ date_text }}</span>{% endif %}</span>
+        <span class="font-semibold tabular-nums">{{ group.total|money }}</span>
+      </h2>
+      <ol class="divide-y divide-cream-dark">
+        {% for expense in group.expenses %}
+        {{ expense_row(expense) }}
+        {% endfor %}
+      </ol>
+    </section>
     {% endfor %}
-  </ol>
+  </div>
   {% else %}
-  <div class="card mt-4 mb-28 text-center text-ink-soft">
-    {% if view.day %}
-    Nothing spent on {{ view.day|short_date }}.
-    {% elif view.is_current_month %}
-    No expenses yet this month. Tap + to add your first one.
-    {% else %}
-    No expenses in {{ view.month|month_label }}.
+  <div class="card mt-4 flex flex-col items-center gap-4 py-10 text-center sm:mt-6">
+    <p class="text-ink-soft">
+      {% if view.day %}
+      Nothing spent on {{ view.day|short_date }}.
+      {% elif view.is_current_month %}
+      No expenses yet this month. Tap + to add your first one.
+      {% else %}
+      No expenses in {{ view.month|month_label }}.
+      {% endif %}
+    </p>
+    {% if view.is_current_month and not view.day %}
+    <a href="{{ url_for('expenses.dashboard', add=1, **params) }}" class="btn-dark btn-sm" data-open-dialog="add-expense">{{ icon("plus", "h-4 w-4") }}Add an expense</a>
     {% endif %}
   </div>
   {% endif %}
@@ -46,9 +62,9 @@
 
 <dialog id="add-expense" class="dialog-panel" aria-labelledby="add-expense-title"{% if open_add %} open data-auto-open{% endif %}>
   <div class="p-5 sm:p-6">
-    <div class="mb-5 flex items-center justify-between">
+    <div class="mb-4 flex items-center justify-between">
       <h2 id="add-expense-title" class="text-xl font-bold">Add expense</h2>
-      <button type="button" class="btn-ghost btn-sm" data-close-dialog aria-label="Close">×</button>
+      <button type="button" class="btn-icon" data-close-dialog aria-label="Close">{{ icon("x") }}</button>
     </div>
     {{ expense_form(form, categories, url_for('expenses.create_expense'), "Save expense", today_iso, in_dialog=True) }}
   </div>
@@ -57,6 +73,5 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/dialogs.js') }}" defer></script>
-<script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/expense-form.js') }}" defer></script>
 {% endblock %}

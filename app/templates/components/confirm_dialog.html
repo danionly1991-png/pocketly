@@ -1,12 +1,17 @@
 {#- A button that opens a small confirm <dialog>; confirming POSTs to `action` (with a CSRF token).
     Without JavaScript the trigger is replaced by a plain POST button, so deleting still works.
+    trigger_icon: an icon name from macros.icon; the trigger then shows only the icon and trigger_label is screen-reader text.
     Import with: {% from "components/confirm_dialog.html" import confirm_dialog %} -#}
-{% macro confirm_dialog(id, title, message, action, trigger_label="Delete", trigger_class="btn-ghost text-ember-dark", confirm_label="Delete") -%}
-<button type="button" hidden data-js-only data-open-dialog="{{ id }}" class="{{ trigger_class }}">{{ trigger_label }}</button>
+{% from "components/macros.html" import icon %}
+{% macro confirm_dialog(id, title, message, action, trigger_label="Delete", trigger_class="btn-ghost text-ember-dark", confirm_label="Delete", trigger_icon=None) -%}
+{%- set trigger_content -%}
+{%- if trigger_icon %}{{ icon(trigger_icon) }}<span class="sr-only">{{ trigger_label }}</span>{% else %}{{ trigger_label }}{% endif -%}
+{%- endset -%}
+<button type="button" hidden data-js-only data-open-dialog="{{ id }}" class="{{ trigger_class }}">{{ trigger_content }}</button>
 <noscript>
   <form method="post" action="{{ action }}" class="inline">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button type="submit" class="{{ trigger_class }}">{{ trigger_label }}</button>
+    <button type="submit" class="{{ trigger_class }}">{{ trigger_content }}</button>
   </form>
 </noscript>
 <dialog id="{{ id }}" class="dialog-confirm" aria-labelledby="{{ id }}-title">

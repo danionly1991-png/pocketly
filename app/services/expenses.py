@@ -1,7 +1,8 @@
 """Expense queries and the dashboard view. Runs as the logged-in user, so RLS applies.
 
 Money is `Decimal`: amounts are read with `amount::text` and totals come from the
-`dashboard_totals` SQL function (a database `sum()`), never from adding floats in Python.
+`dashboard_totals` and `dashboard_day_totals` SQL functions (a database `sum()`).
+Python never adds amounts up; it only groups rows and formats the results.
 """
 
 from __future__ import annotations
@@ -46,6 +47,15 @@ class Totals:
 
 
 @dataclass(frozen=True)
+class DayGroup:
+    """One day's heading in the dashboard list: its expenses and their SQL total."""
+
+    day: date
+    total: Decimal  # from dashboard_day_totals() (a database sum())
+    expenses: list[Expense]
+
+
+@dataclass(frozen=True)
 class DashboardView:
     today: date
     current_month: date
@@ -55,6 +65,7 @@ class DashboardView:
     is_current_month: bool
     month_options: list[tuple[str, str]]
     expenses: list[Expense]
+    day_groups: list[DayGroup]
     totals: Totals
     date_min: date  # day picker limits
     date_max: date
@@ -190,6 +201,31 @@ def dashboard_totals(today: date, view_from: date, view_to: date) -> Totals:
     )
 
 
+def day_totals(start: date, end: date) -> dict[date, Decimal]:
+    """Total spent on each day from `start` to `end` that has expenses (a database sum() per day)."""
+    try:
+        rows = (
+            user_client()
+            .rpc("dashboard_day_totals", {"p_from": start.isoformat(), "p_to": end.isoformat()})
+            .execute()
+            .data
+        )
+    except CAUGHT as error:
+        raise friendly(error) from None
+    return {date.fromisoformat(row["spent_on"]): to_decimal(row["total"]) for row in rows or []}
+
+
+def group_by_day(expenses: list[Expense], totals: dict[date, Decimal]) -> list[DayGroup]:
+    """Split the newest-first list into consecutive days. Totals come from SQL, never summed here."""
+    groups: list[DayGroup] = []
+    for expense in expenses:
+        if not groups or groups[-1].day != expense.spent_on:
+            day_total = totals.get(expense.spent_on, Decimal("0"))
+            groups.append(DayGroup(day=expense.spent_on, total=day_total, expenses=[]))
+        groups[-1].expenses.append(expense)
+    return groups
+
+
 def build_dashboard(month_param: str | None, day_param: str | None) -> DashboardView:
     """Everything the dashboard page needs. Invalid month/day params are silently ignored."""
     today = karachi_today()
@@ -201,6 +237,7 @@ def build_dashboard(month_param: str | None, day_param: str | None) -> Dashboard
     view_from, view_to = (day, day) if day else (month, month_end(month))
     expenses = list_expenses(view_from, view_to)
     totals = dashboard_totals(today, view_from, view_to)
+    groups = group_by_day(expenses, day_totals(view_from, view_to)) if expenses else []
     first_month = min(month_start(totals.first_month), month)
 
     return DashboardView(
@@ -212,6 +249,7 @@ def build_dashboard(month_param: str | None, day_param: str | None) -> Dashboard
         is_current_month=is_current,
         month_options=month_options(first_month, current),
         expenses=expenses,
+        day_groups=groups,
         totals=totals,
         date_min=month,
         date_max=today if is_current else month_end(month),
@@ -235,6 +273,7 @@ def empty_view(month_param: str | None, day_param: str | None) -> DashboardView:
         is_current_month=is_current,
         month_options=month_options(month, current),
         expenses=[],
+        day_groups=[],
         totals=Totals(first_month=month, month_to_date=zero, view_total=zero),
         date_min=month,
         date_max=today if is_current else month_end(month),

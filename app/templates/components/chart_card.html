@@ -9,7 +9,7 @@
 
 {% macro chart_card(heading, id, extra="") -%}
 <section class="card chart-card {{ extra }}" aria-labelledby="{{ id }}-heading">
-  <h2 id="{{ id }}-heading" class="font-semibold">{{ heading }}</h2>
+  <h2 id="{{ id }}-heading" class="text-lg font-bold tracking-tight">{{ heading }}</h2>
   {{ caller() }}
 </section>
 {%- endmacro %}

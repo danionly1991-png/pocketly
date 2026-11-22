@@ -1,10 +1,20 @@
+{#- Navbar. Logged-in app pages (app_shell) get Expenses / Analytics links and the profile menu;
+    everywhere else shows Log in / Get started (or Dashboard / Log out when signed in). -#}
 {% from "components/macros.html" import button, logout_button %}
 <header class="container-page">
-  <nav class="flex items-center justify-between gap-3 py-5 sm:py-6" aria-label="Main">
-    <a href="{{ url_for('expenses.dashboard' if current_user else 'main.landing') }}" class="inline-flex items-center gap-1.5 text-xl font-extrabold tracking-tight sm:text-2xl">
+  <nav class="flex items-center justify-between gap-2 py-4 sm:py-6" aria-label="Main">
+    <a href="{{ url_for('expenses.dashboard' if current_user else 'main.landing') }}" class="inline-flex shrink-0 items-center gap-1.5 text-xl font-extrabold tracking-tight sm:text-2xl">
       Pocketly<span class="mt-2 h-2 w-2 rounded-full bg-ember" aria-hidden="true"></span>
     </a>
-    {% if not (current_user and app_shell) %}
+    {% if current_user and app_shell %}
+    <div class="flex min-w-0 items-center gap-1 sm:gap-6">
+      <ul class="flex items-center sm:gap-2">
+        <li><a href="{{ url_for('expenses.dashboard') }}" class="nav-link"{% if nav_section == "expenses" %} aria-current="page"{% endif %}>Expenses</a></li>
+        <li><a href="{{ url_for('analytics.index') }}" class="nav-link"{% if nav_section == "analytics" %} aria-current="page"{% endif %}>Analytics</a></li>
+      </ul>
+      {% include "components/profile_menu.html" %}
+    </div>
+    {% else %}
     <div class="flex items-center gap-1 sm:gap-2">
       {% if current_user %}
       {{ button("Dashboard", url_for("expenses.dashboard"), "ghost", extra="btn-sm") }}

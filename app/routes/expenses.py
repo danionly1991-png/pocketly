@@ -99,7 +99,8 @@ def create_expense():
             view_day = parse_iso_date(form.return_day.data)
             day = view_day if view_day == spent_on else None
             params = _dashboard_params(month_start(spent_on), day, month_start(today))
-            return redirect(url_for("expenses.dashboard", **params))
+            # The anchor scrolls to the new row and tints it briefly (CSS :target).
+            return redirect(url_for("expenses.dashboard", _anchor=f"expense-{created['id']}", **params))
 
     view = _build_view(form.return_month.data, form.return_day.data)
     return _render_dashboard(view, form, categories, open_add=True)

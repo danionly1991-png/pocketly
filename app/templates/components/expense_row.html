@@ -1,16 +1,18 @@
-{#- One clickable expense bar. Import with: {% from "components/expense_row.html" import expense_row %} -#}
+{#- One clickable expense row inside a day group. Import with: {% from "components/expense_row.html" import expense_row %}
+    The id lets a fresh save link to #expense-<id>, which tints the row briefly (CSS :target). -#}
 {% from "components/category_icon.html" import category_icon %}
 
-{% macro expense_row(expense, number) -%}
+{% macro expense_row(expense) -%}
 <li>
-  <a href="{{ url_for('expenses.detail', expense_id=expense.id) }}" class="expense-row">
-    <span class="hidden text-sm text-ink-soft sm:block">{{ number }}</span>
-    <span class="flex min-w-0 items-center gap-3">
-      {{ category_icon(expense.category) }}
-      <span class="truncate font-semibold">{{ expense.category.name }}</span>
+  <a href="{{ url_for('expenses.detail', expense_id=expense.id) }}" id="expense-{{ expense.id }}" class="expense-row">
+    {{ category_icon(expense.category) }}
+    <span class="min-w-0">
+      <span class="block truncate font-semibold">{{ expense.category.name }}</span>
+      {%- if expense.note and expense.note.strip() %}
+      <span class="block truncate text-sm text-ink-soft">{{ expense.note.strip().splitlines()[0] }}</span>
+      {%- endif %}
     </span>
-    <span class="text-right font-bold tabular-nums">{{ expense.amount|money }}</span>
-    <span class="col-span-2 text-sm text-ink-soft sm:col-span-1 sm:text-right"><span class="sm:hidden">#{{ number }} · </span>{{ expense.spent_on|short_date }}</span>
+    <span class="font-bold tabular-nums">{{ expense.amount|money }}</span>
   </a>
 </li>
 {%- endmacro %}

@@ -1,14 +1,15 @@
 {#- One analytics stat card. Import with: {% from "components/stat_card.html" import stat_card %}
-    size: lg | md | sm (from stat_size(value), so long amounts shrink instead of overflowing).
+    size: lg | md | sm (from stat_size(value_text), so long amounts shrink instead of overflowing).
+    value can be plain text or markup from the `amount` macro.
     Call with {% call stat_card(...) %}…{% endcall %} to put an icon on the right of the label row. -#}
-{% macro stat_card(label, value, sub, size="lg", dark=False, href=None, value_class="") -%}
+{% macro stat_card(label, value, sub, size="lg", href=None, value_class="") -%}
 {%- set tag = "a" if href else "div" -%}
-<{{ tag }}{% if href %} href="{{ href }}"{% endif %} class="{{ 'card-dark' if dark else 'card' }} @container block min-w-0{% if href %} transition duration-150 hover:-translate-y-0.5{% endif %}">
+<{{ tag }}{% if href %} href="{{ href }}"{% endif %} class="card @container block min-w-0{% if href %} transition-colors duration-150 hover:border-ink-soft/40{% endif %}">
   <div class="flex items-center justify-between gap-2">
-    <p class="truncate text-xs font-semibold uppercase tracking-wide {{ 'text-cream/70' if dark else 'text-ink-soft' }}">{{ label }}</p>
-    {%- if caller is defined %}{{ caller() }}{% endif %}
+    <p class="truncate text-xs text-ink-soft sm:text-sm">{{ label }}</p>
+    {%- if caller is defined %}<span class="hidden shrink-0 lg:block">{{ caller() }}</span>{% endif %}
   </div>
   <p class="stat-value stat-value-{{ size }} {{ value_class }}">{{ value }}</p>
-  <p class="mt-1 truncate text-xs {{ 'text-cream/70' if dark else 'text-ink-soft' }}">{{ sub }}</p>
+  <p class="mt-1 truncate text-xs text-ink-soft">{{ sub }}</p>
 </{{ tag }}>
 {%- endmacro %}

@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% from "components/macros.html" import auth_card, button %}
 
-{% block title %}Link expired · Pocketly{% endblock %}
+{% block title %}Link expired – Pocketly{% endblock %}
 
 {% block content %}
-{% call auth_card("This link has", "expired.") %}
+{% call auth_card("This link has expired") %}
 {% if kind == "recovery" %}
 <p class="text-ink-soft">This password reset link is invalid or has already been used. Request a new one and try again.</p>
 {{ button("Request a new email", url_for("auth.forgot_password"), "primary", extra="w-full") }}

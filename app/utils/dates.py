@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import calendar
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from zoneinfo import ZoneInfo
 
@@ -114,6 +114,11 @@ def money(value) -> str:
     return f"Rs {amount:,.2f}"
 
 
+def money_number(value, whole: bool = False) -> str:
+    """The number part of money() (or whole_money()): 1,250 or 99.50. The `amount` macro sets "Rs" separately."""
+    return (whole_money(value) if whole else money(value)).removeprefix("Rs ")
+
+
 def whole_money(value) -> str:
     """Rs 293 for 293.18: rounded half-up to whole rupees (the analytics daily average)."""
     return money(to_decimal(value).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
@@ -159,6 +164,16 @@ def day_range_label(start: date, end: date) -> str:
     return f"{start.day}–{end.day} {end:%b}"
 
 
+def day_heading(d: date) -> str:
+    """Dashboard day-group heading: "Today", "Yesterday", or "Thu, 19 Nov" (Karachi time)."""
+    today = karachi_today()
+    if d == today:
+        return "Today"
+    if d == today - timedelta(days=1):
+        return "Yesterday"
+    return short_date(d)
+
+
 def day_month(d: date) -> str:
     return f"{d.day} {d:%b}"
 
@@ -176,6 +191,7 @@ def iso_day_name(value: str | None) -> str:
 def register_filters(app: Flask) -> None:
     for fn in (
         money,
+        money_number,
         whole_money,
         amount_input,
         short_date,
@@ -184,6 +200,8 @@ def register_filters(app: Flask) -> None:
         month_name,
         month_short,
         month_value,
+        day_range_label,
+        day_heading,
         day_month,
         day_name,
         iso_day_name,

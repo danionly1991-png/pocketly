@@ -1,36 +1,40 @@
 {#- The expense form, shared by the add panel (dashboard) and the edit page.
-    Import with: {% from "components/expense_form.html" import expense_form %} -#}
+    Import with: {% from "components/expense_form.html" import expense_form %}
+    Order follows how people log: amount first (large), then category, then date (Today / Yesterday in one tap),
+    then an optional note that stays folded away. The quick date buttons need js/expense-form.js;
+    without JS they stay hidden and the date input works on its own. -#}
 {% from "components/category_icon.html" import category_icon %}
+{% from "components/macros.html" import icon %}
 
 {% macro expense_form(form, categories, action, submit_label, today_iso, in_dialog=False, cancel_url=None) -%}
-<form method="post" action="{{ action }}" class="space-y-5" novalidate>
+<form method="post" action="{{ action }}" class="space-y-6" novalidate>
   {{ form.hidden_tag() }}
 
   <div>
-    <label for="{{ form.amount.id }}" class="form-label">Amount</label>
-    <div class="relative">
-      <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center font-semibold text-ink-soft">Rs</span>
+    <label for="{{ form.amount.id }}" class="form-label text-ink-soft">Amount</label>
+    <div class="amount-field">
+      <span class="amount-field-cur" aria-hidden="true">Rs</span>
       {% if form.amount.errors -%}
-      {{ form.amount(class="form-input pl-12", type="number", step="0.01", min="0.01", inputmode="decimal", autocomplete="off", aria_invalid="true", aria_describedby="amount-error") }}
+      {{ form.amount(class="amount-input", type="number", step="0.01", min="0.01", inputmode="decimal", autocomplete="off", aria_invalid="true", aria_describedby="amount-error") }}
       {%- else -%}
-      {{ form.amount(class="form-input pl-12", type="number", step="0.01", min="0.01", inputmode="decimal", autocomplete="off", placeholder="0") }}
+      {{ form.amount(class="amount-input", type="number", step="0.01", min="0.01", inputmode="decimal", autocomplete="off", placeholder="0", autofocus=in_dialog) }}
       {%- endif %}
     </div>
     {% if form.amount.errors %}<p id="amount-error" class="form-error">{{ form.amount.errors[0] }}</p>{% endif %}
   </div>
 
   <fieldset>
-    <legend class="form-label">Category</legend>
+    <legend class="form-label text-ink-soft">Category</legend>
     {% if categories %}
-    <div class="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3">
+    <div class="flex flex-wrap gap-2">
       {% for c in categories %}
       <label class="category-chip">
         <input type="radio" name="category_id" value="{{ c.id }}" class="sr-only"{% if form.category_id.data == c.id %} checked{% endif %}>
-        {{ category_icon(c) }}
+        {{ category_icon(c, "sm") }}
         <span class="truncate">{{ c.name }}</span>
       </label>
       {% endfor %}
-      <a href="{{ url_for('categories.index') }}" class="category-chip justify-center border-dashed">+ New category</a>
+      <a href="{{ url_for('categories.index') }}" class="category-chip-new">+ New category</a>
     </div>
     {% else %}
     <p class="text-sm text-ink-soft">Couldn't load your categories. <a href="{{ url_for('categories.index') }}" class="link-ember">Manage categories</a></p>
@@ -39,26 +43,33 @@
   </fieldset>
 
   <div>
-    <label for="{{ form.spent_on.id }}" class="form-label">Date</label>
-    {% if form.spent_on.errors -%}
-    {{ form.spent_on(class="form-input", type="date", max=today_iso, data_day_input=True, aria_invalid="true", aria_describedby="spent_on-error") }}
-    {%- else -%}
-    {{ form.spent_on(class="form-input", type="date", max=today_iso, data_day_input=True) }}
-    {%- endif %}
+    <label for="{{ form.spent_on.id }}" class="form-label text-ink-soft">Date</label>
+    <div class="flex flex-wrap items-center gap-2" data-day-quick-group data-today="{{ today_iso }}">
+      <button type="button" class="day-quick" data-day-quick="0" aria-pressed="false" hidden>Today</button>
+      <button type="button" class="day-quick" data-day-quick="1" aria-pressed="false" hidden>Yesterday</button>
+      {% if form.spent_on.errors -%}
+      {{ form.spent_on(class="form-input w-auto min-w-40 flex-1 py-2.5 text-sm", type="date", max=today_iso, data_day_input=True, aria_invalid="true", aria_describedby="spent_on-error") }}
+      {%- else -%}
+      {{ form.spent_on(class="form-input w-auto min-w-40 flex-1 py-2.5 text-sm", type="date", max=today_iso, data_day_input=True) }}
+      {%- endif %}
+    </div>
     <p class="mt-1.5 text-sm text-ink-soft" data-day-name>{{ form.spent_on.data|iso_day_name }}</p>
     {% if form.spent_on.errors %}<p id="spent_on-error" class="form-error">{{ form.spent_on.errors[0] }}</p>{% endif %}
   </div>
 
-  <div>
-    <label for="{{ form.note.id }}" class="form-label">Note <span class="font-normal text-ink-soft">(optional)</span></label>
-    {% if form.note.errors -%}
-    {{ form.note(class="form-input min-h-24", rows="3", maxlength="500", data_char_input=True, aria_invalid="true", aria_describedby="note-error") }}
-    {%- else -%}
-    {{ form.note(class="form-input min-h-24", rows="3", maxlength="500", data_char_input=True) }}
-    {%- endif %}
-    <p class="mt-1.5 text-right text-xs text-ink-soft"><span data-char-count>{{ (form.note.data or '')|length }}</span>/500</p>
-    {% if form.note.errors %}<p id="note-error" class="form-error">{{ form.note.errors[0] }}</p>{% endif %}
-  </div>
+  <details{% if form.note.data or form.note.errors %} open{% endif %}>
+    <summary class="note-toggle">{{ icon("note", "h-4 w-4") }}{% if form.note.data %}Note{% else %}Add a note{% endif %}</summary>
+    <div class="mt-3">
+      <label for="{{ form.note.id }}" class="sr-only">Note (optional)</label>
+      {% if form.note.errors -%}
+      {{ form.note(class="form-input min-h-24", rows="3", maxlength="500", data_char_input=True, aria_invalid="true", aria_describedby="note-error") }}
+      {%- else -%}
+      {{ form.note(class="form-input min-h-24", rows="3", maxlength="500", data_char_input=True, placeholder="What was it for?") }}
+      {%- endif %}
+      <p class="mt-1.5 text-right text-xs text-ink-soft"><span data-char-count>{{ (form.note.data or '')|length }}</span>/500</p>
+      {% if form.note.errors %}<p id="note-error" class="form-error">{{ form.note.errors[0] }}</p>{% endif %}
+    </div>
+  </details>
 
   <div class="space-y-2">
     <button type="submit" class="btn-primary w-full">{{ submit_label }}</button>

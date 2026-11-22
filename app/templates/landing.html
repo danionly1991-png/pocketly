@@ -6,51 +6,44 @@
 {% if get_flashed_messages() %}
 <div class="container-page"><div class="max-w-md">{{ flash_messages() }}</div></div>
 {% endif %}
-{#- Hero -#}
-<section class="container-page pb-16 pt-6 sm:pt-10 lg:pb-24 lg:pt-14">
-  <div class="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+{#- Hero: the only place the serif swoosh appears. -#}
+<section class="container-page pb-16 pt-4 sm:pt-8 lg:pb-24 lg:pt-12">
+  <div class="grid items-center gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
     <div>
-      <p class="inline-flex items-center gap-2 rounded-full bg-ink py-1 pl-1 pr-3 text-xs font-medium text-cream sm:text-sm">
-        <span class="rounded-full bg-ember px-2 py-0.5 text-[11px] font-semibold text-white">New</span>
-        Track your pocket money in seconds
-      </p>
-
-      <h1 class="mt-6 text-[40px] font-extrabold leading-[1.05] tracking-tight sm:text-6xl lg:text-[68px]">
+      <h1 class="text-display font-extrabold tracking-tight sm:text-hero">
         Know where your pocket money {{ accent("actually goes.") }}
       </h1>
 
-      <p class="mt-6 max-w-xl text-base leading-relaxed text-ink-soft sm:text-lg">
-        Pocketly lets you log daily expenses in seconds and shows you exactly how this month is going, so you never wonder where it all went.
+      <p class="mt-6 max-w-lg text-lg leading-relaxed text-ink-soft">
+        Log each expense in a few seconds. Pocketly keeps a running total for the month and shows which days and categories take the most.
       </p>
 
       <div class="mt-8 flex flex-wrap items-center gap-3">
-        {{ button("Get started", get_started_url, "primary", arrow=True) }}
+        {{ button("Get started", get_started_url, "primary") }}
         {{ button("Log in", url_for("auth.login"), "ghost") }}
       </div>
 
-      <p class="mt-5 text-sm text-ink-soft">Free · No card needed · Built for students</p>
+      <p class="mt-5 text-sm text-ink-soft">Free to use. Amounts in rupees, dates in Pakistan time.</p>
     </div>
 
     {% include "components/hero_visual.html" %}
   </div>
 </section>
 
-{#- Features strip -#}
+{#- What the app does -#}
 <section class="border-t border-cream-dark">
-  <div class="container-page grid gap-8 py-12 sm:grid-cols-3 sm:gap-6 lg:py-16">
-    {{ feature("plus", "Add in seconds", "Tap +, type the amount, done.") }}
-    {{ feature("calendar", "This month at a glance", "Your home screen shows only what you spent this month.") }}
-    {{ feature("chart", "Understand your spending", "Simple analytics show where your money goes.") }}
+  <div class="container-page grid gap-10 py-14 sm:grid-cols-3 sm:gap-8 lg:py-20">
+    {{ feature("plus", "Log it before you forget", "Tap +, type the amount and pick a category. The date is already set to today.") }}
+    {{ feature("calendar", "See the month day by day", "Expenses are grouped by day with each day's total, and this month's running total sits at the top.") }}
+    {{ feature("chart", "Find where it goes", "Analytics show your top categories, your biggest days and how this month compares with last month.") }}
   </div>
 </section>
 
 {#- Final CTA -#}
 <section class="container-page pb-16 lg:pb-24">
-  <div class="card-dark flex flex-col items-center gap-6 rounded-3xl px-6 py-12 text-center sm:py-14">
-    <p class="max-w-xl text-2xl font-extrabold tracking-tight sm:text-3xl">
-      Ready to take control of your pocket money?
-    </p>
-    {{ button("Get started", get_started_url, "primary", arrow=True) }}
+  <div class="card-dark flex flex-col items-start gap-6 rounded-sheet px-6 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-10 sm:py-12">
+    <p class="max-w-xl text-title font-extrabold tracking-tight">Your month started on the 1st. Start tracking it today.</p>
+    {{ button("Get started", get_started_url, "primary") }}
   </div>
 </section>
 {% endblock %}
